@@ -1,0 +1,58 @@
+#!/bin/bash
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+if [ "$1" = "inject-ig" ]; then
+    echo "🚀 Iniciando inject-ig..."
+
+    # ── 1. Mata instâncias antigas do Core Engine na porta 8080 ──
+    OLD_PID=$(lsof -ti tcp:8080 2>/dev/null)
+    if [ -n "$OLD_PID" ]; then
+        echo "   ⚙️  Matando Core Engine antigo (PID $OLD_PID)..."
+        kill -9 $OLD_PID 2>/dev/null
+        sleep 1
+    fi
+
+    # ── 2. Inicia o Core Engine Java em background ──
+    CORE_DIR="$SCRIPT_DIR/inject-ig-engine/core-engine"
+    if [ -f "$CORE_DIR/mvnw" ]; then
+        echo "   ⚙️  Iniciando Core Engine Java..."
+        cd "$CORE_DIR"
+        chmod +x mvnw
+        ./mvnw spring-boot:run -q > "$SCRIPT_DIR/core-engine.log" 2>&1 &
+        CORE_PID=$!
+        echo "   ⚙️  Core Engine PID: $CORE_PID (log: core-engine.log)"
+        cd "$SCRIPT_DIR"
+
+        # ── 3. Aguarda até a porta 8080 responder (máx 60s) ──
+        echo "   ⏳ Aguardando Core Engine ficar online..."
+        MAX_WAIT=60
+        WAITED=0
+        until curl -sf http://localhost:8080/api/inject-ig/status > /dev/null 2>&1; do
+            sleep 2
+            WAITED=$((WAITED + 2))
+            if [ $WAITED -ge $MAX_WAIT ]; then
+                echo "   ⚠️  Core Engine não respondeu em ${MAX_WAIT}s. Verifique core-engine.log."
+                break
+            fi
+        done
+
+        if curl -sf http://localhost:8080/api/inject-ig/status > /dev/null 2>&1; then
+            echo "   ✅ Core Engine online em localhost:8080"
+        fi
+    else
+        echo "   ⚠️  Core Engine não encontrado em $CORE_DIR — pulando."
+    fi
+
+    # ── 4. Inicia o Electron ──
+    cd "$SCRIPT_DIR/inject-ig-console" && npx electron .
+
+else
+    echo "Uso: iniciar inject-ig"
+fi

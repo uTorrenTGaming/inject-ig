@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>inject-ig</title>
+    <link rel="stylesheet" href="./node_modules/xterm/css/xterm.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg: #0c0e13;
+            --surface-1: #13161d;
+            --surface-2: #191d27;
+            --surface-3: #1f2430;
+            --border-1: rgba(255,255,255,0.035);
+            --border-2: rgba(255,255,255,0.06);
+            --text-1: #e8eaed;
+            --text-2: #737d8c;
+            --text-3: #454d5a;
+            --accent: #3b82f6;
+            --accent-muted: rgba(59,130,246,0.10);
+            --green: #22c55e;
+            --green-muted: rgba(34,197,94,0.10);
+            --red: #ef4444;
+            --red-muted: rgba(239,68,68,0.10);
+            --amber: #f59e0b;
+            --amber-muted: rgba(245,158,11,0.10);
+            --font: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+            --mono: 'Geist Mono', 'SF Mono', monospace;
+            --ease: cubic-bezier(0.32, 0.72, 0, 1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body, html {
+            width: 100%; height: 100%;
+            font-family: var(--font);
+            background: transparent;
+            color: var(--text-1);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ═══════════ SHELL ═══════════ */
+        .app {
+            width: 100%; height: 100%;
+            background: var(--bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-2);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 0.5px rgba(0,0,0,0.5),
+                0 24px 48px -12px rgba(0,0,0,0.65);
+        }
+
+        /* ═══════════ TITLEBAR ═══════════ */
+        .titlebar {
+            -webkit-app-region: drag;
+            height: 38px;
+            display: flex; align-items: center;
+            padding: 0 14px;
+            background: var(--bg);
+            position: relative;
+            z-index: 10;
+        }
+        .traffic {
+            -webkit-app-region: no-drag;
+            display: flex; gap: 8px;
+            position: absolute; left: 14px;
+        }
+        .traffic-btn {
+            width: 12px; height: 12px; border-radius: 50%;
+            border: none; outline: none; cursor: pointer;
+            transition: opacity 0.15s;
+            opacity: 1;
+        }
+        .traffic-btn:active { opacity: 0.6; }
+        .traffic-btn.close { background: #ff5f57; }
+        .traffic-btn.minimize { background: #febc2e; }
+        .traffic-btn.maximize { background: #28c840; }
+        .titlebar-text {
+            width: 100%; text-align: center;
+            font-size: 12px; font-weight: 500;
+            color: var(--text-3);
+            letter-spacing: 0.02em;
+        }
+
+        /* ═══════════ TOOLBAR (Segmented Control) ═══════════ */
+        .toolbar {
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 14px 10px;
+            background: var(--bg);
+        }
+        .segmented {
+            display: flex;
+            background: var(--surface-1);
+            border: 1px solid var(--border-1);
+            border-radius: 8px;
+            padding: 2px;
+            width: 100%;
+        }
+        .seg-btn {
+            flex: 1;
+            padding: 6px 0;
+            font-size: 11px; font-weight: 500; font-family: var(--font);
+            color: var(--text-3);
+            background: transparent;
+            border: none; border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.35s var(--ease);
+            position: relative;
+        }
+        .seg-btn:hover { color: var(--text-2); }
+        .seg-btn.active {
+            background: var(--surface-2);
+            color: var(--text-1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.25), inset 0 0.5px 0 rgba(255,255,255,0.04);
+        }
+
+        /* ═══════════ VIEWS ═══════════ */
+        .view {
+            display: none; flex-direction: column; flex: 1;
+            padding: 0 12px 12px;
+            overflow-y: auto; overflow-x: hidden;
+        }
+        .view.active { display: flex; }
+
+        /* ═══════════ CARDS (Double-Bezel / Concentric) ═══════════ */
+        .card {
+            background: var(--surface-1);
+            border: 1px solid var(--border-1);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .card::after {
+            content: '';
+            position: absolute; inset: 0;
+            border-radius: 14px;
+            box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.03);
+            pointer-events: none;
+        }
+        .card-label {
+            font-size: 10px; font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+        }
+        .card-title {
+            font-size: 13px; font-weight: 600;
+            color: var(--text-1);
+            letter-spacing: -0.01em;
+            margin-bottom: 4px;
+        }
+        .card-desc {
+            font-size: 11px; font-weight: 400;
+            color: var(--text-2);
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+
+        /* ═══════════ BUTTONS ═══════════ */
+        .btn {
+            width: 100%; padding: 9px 14px;
+            font-size: 11px; font-weight: 600; font-family: var(--font);
+            border: none; border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.35s var(--ease);
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-green {
+            background: var(--green);
+            color: #fff;
+        }
+        .btn-green:hover { filter: brightness(1.1); }
+        .btn-ghost {
+            background: var(--surface-2);
+            color: var(--text-2);
+            border: 1px solid var(--border-1);
+        }
+        .btn-ghost:hover { background: var(--surface-3); color: var(--text-1); }
+
+        /* ═══════════ INPUTS ═══════════ */
+        input[type="text"] {
+            background: var(--surface-1) !important;
+            border: 1px solid var(--border-1) !important;
+            border-radius: 8px !important;
+            padding: 9px 12px !important;
+            font-size: 11px !important;
+            font-family: var(--font) !important;
+            color: var(--text-1) !important;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]::placeholder { color: var(--text-3); }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 3px var(--accent-muted) !important;
+        }
+
+        /* ═══════════ TERMINAL ═══════════ */
+        .terminal-wrap {
+            flex: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #08090c;
+            border: 1px solid var(--border-1);
+        }
+
+        /* ═══════════ DATA LAYER ═══════════ */
+        .data-well {
+            background: var(--surface-1);
+            border: 1px solid var(--border-1);
+            border-radius: 10px;
+            padding: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border-1);
+            font-size: 11px;
+        }
+        .row:last-child { border-bottom: none; }
+        .row-k { color: var(--text-2); font-weight: 500; }
+        .row-v {
+            color: var(--text-1); font-weight: 600;
+            font-family: var(--mono);
+            font-variant-numeric: tabular-nums;
+            font-size: 10px;
+            text-align: right;
+            max-width: 55%;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .row-v.red { color: var(--red); }
+        .row-v.green { color: var(--green); }
+        .row-v.amber { color: var(--amber); }
+
+        /* ═══════════ BADGE ═══════════ */
+        .tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-size: 9px; font-weight: 600; font-family: var(--font);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .tag-blue { background: var(--accent-muted); color: var(--accent); }
+        .tag-red { background: var(--red-muted); color: var(--red); }
+        .tag-green { background: var(--green-muted); color: var(--green); }
+        .tag-amber { background: var(--amber-muted); color: var(--amber); }
+
+        /* ═══════════ FILE TREE ═══════════ */
+        .folder {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px;
+            background: var(--surface-1);
+            border: 1px solid var(--border-1);
+            border-radius: 8px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            font-size: 11px; font-weight: 500;
+            color: var(--text-2);
+            transition: all 0.3s var(--ease);
+        }
+        .folder:hover { background: var(--surface-2); color: var(--text-1); }
+        .folder-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .folder-children {
+            display: none; flex-direction: column;
+            padding-left: 18px; margin-bottom: 6px;
+        }
+        .folder-children.open { display: flex; }
+        .folder-child {
+            padding: 4px 0;
+            font-size: 10px; font-family: var(--mono);
+            color: var(--text-3);
+            border-bottom: 1px solid var(--border-1);
+            word-break: break-all;
+            transition: color 0.2s, padding-left 0.2s;
+        }
+        .folder-child:last-child { border-bottom: none; }
+        .folder-child:hover { color: var(--accent); padding-left: 4px; }
+
+        /* ═══════════ SEGMENTED SUB-TABS ═══════════ */
+        .sub-seg {
+            display: flex;
+            background: var(--surface-1);
+            border: 1px solid var(--border-1);
+            border-radius: 7px;
+            padding: 2px;
+            margin-bottom: 8px;
+        }
+        .sub-seg-btn {
+            flex: 1; padding: 5px 0;
+            font-size: 10px; font-weight: 500; font-family: var(--font);
+            color: var(--text-3);
+            background: transparent; border: none; border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s var(--ease);
+        }
+        .sub-seg-btn:hover { color: var(--text-2); }
+        .sub-seg-btn.active {
+            background: var(--surface-2); color: var(--text-1);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* ═══════════ PULSE DOT ═══════════ */
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+        .pulse-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            position: relative; flex-shrink: 0;
+        }
+        .pulse-dot::after {
+            content: '';
+            position: absolute; inset: -2px;
+            border-radius: 50%;
+            background: inherit;
+            animation: pulse-ring 2s var(--ease) infinite;
+        }
+
+        /* ═══════════ SCROLLBAR ═══════════ */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.10); }
+
+        /* ═══════════ SECTION LABELS ═══════════ */
+        .section-label {
+            font-size: 10px; font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 8px 0 6px;
+        }
+
+        /* ═══════════ SCAN PROGRESS BAR ═══════════ */
+        .scan-progress {
+            height: 3px;
+            background: var(--surface-2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .scan-progress.active { opacity: 1; }
+        .scan-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #818cf8, var(--accent));
+            background-size: 200% 100%;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.5s var(--ease);
+            animation: shimmer-bar 1.5s linear infinite;
+        }
+        @keyframes shimmer-bar {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        /* ═══════════ SCORE BADGE ═══════════ */
+        .score-badge {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px;
+            background: var(--surface-1);
+            border: 1px solid var(--border-1);
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .score-ring {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 700;
+            font-family: var(--mono);
+            position: relative;
+            flex-shrink: 0;
+        }
+        .score-ring::before {
+            content: '';
+            position: absolute; inset: -2px;
+            border-radius: 50%;
+            background: conic-gradient(var(--score-color) var(--score-pct), transparent var(--score-pct));
+            opacity: 0.2;
+            z-index: 0;
+        }
+        .score-ring span { position: relative; z-index: 1; }
+        .score-meta { display: flex; flex-direction: column; gap: 2px; }
+        .score-label { font-size: 11px; font-weight: 600; color: var(--text-1); }
+        .score-sublabel { font-size: 9px; color: var(--text-3); font-family: var(--mono); }
+
+        /* ═══════════ MODULE CARD (Streaming) ═══════════ */
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .module-card {
+            background: var(--surface-1);
+            border: 1px solid var(--border-1);
+            border-radius: 10px;
+            margin-bottom: 4px;
+            overflow: hidden;
+            animation: fadeSlideIn 0.35s var(--ease) both;
+        }
+        .module-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 9px 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .module-header:hover { background: var(--surface-2); }
+        .module-header-left {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .module-dot {
+            width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+        }
+        .module-name {
+            font-size: 11px; font-weight: 500; color: var(--text-2);
+        }
+        .module-badge {
+            font-size: 9px; font-weight: 600; font-family: var(--mono);
+            padding: 1px 6px; border-radius: 4px;
+        }
+        .module-body {
+            display: none;
+            padding: 0 12px 10px;
+            border-top: 1px solid var(--border-1);
+        }
+        .module-body.open { display: block; }
+        .module-body .row:first-child { padding-top: 8px; }
+
+        /* ═══════════ SCAN STATUS LABEL ═══════════ */
+        .scan-status {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 0;
+            font-size: 10px; font-family: var(--mono);
+            color: var(--text-3);
+        }
+        .scan-status-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--accent);
+            animation: pulse-ring 1s var(--ease) infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+
+        <!-- ═══ Titlebar ═══ -->
+        <div class="titlebar">
+            <div class="traffic">
+                <button class="traffic-btn close" id="btn-close"></button>
+                <button class="traffic-btn minimize" id="btn-minimize"></button>
+                <button class="traffic-btn maximize"></button>
+            </div>
+            <div class="titlebar-text" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                <svg width="22" height="16" viewBox="0 0 44 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+                    <rect x="0" y="0" width="44" height="32" rx="6" fill="rgba(59,130,246,0.12)"/>
+                    <text x="22" y="23" text-anchor="middle" font-family="'Geist','Inter',sans-serif" font-weight="700" font-size="20" fill="#3b82f6" letter-spacing="-0.5">IG</text>
+                </svg>
+                <span>inject-ig</span>
+            </div>
+        </div>
+
+        <!-- ═══ Segmented Control ═══ -->
+        <div class="toolbar">
+            <div class="segmented">
+                <button class="seg-btn active" data-target="view-terminal">Terminal</button>
+        <button class="seg-btn" data-target="view-inject">Injetor</button>
+        <button class="seg-btn" data-target="view-vault">Cofre</button>
+        <button class="seg-btn" data-target="view-files">Arquivos</button>
+        <button class="seg-btn" data-target="view-tools">Ferramentas</button>
+        <button class="seg-btn" data-target="view-reports">Relatórios</button>
+        
+            </div>
+        </div>
+
+        <!-- ═══ Terminal ═══ -->
+        <div id="view-terminal" class="view active">
+            <div class="terminal-wrap" id="terminal-container"></div>
+        </div>
+
+        <!-- ═══ Inject ═══ -->
+        <div id="view-inject" class="view">
+            <div class="card">
+                <div class="card-label">Injeção</div>
+                <div class="card-title">Injetar Interface</div>
+                <div class="card-desc">Selecione a pasta de um projeto web local. O overlay do inject-ig será inserido automaticamente no index.</div>
+                <button class="btn btn-primary" id="btn-inject-local">Selecionar pasta</button>
+            </div>
+            <div class="card">
+                <div class="card-label">Backend</div>
+                <div class="card-title">Core Engine</div>
+                <div class="card-desc">Inicia o motor Java para processar varreduras, interceptar dados e responder ao monitor.</div>
+                <button class="btn btn-green" id="btn-start-core">Iniciar motor</button>
+            </div>
+        </div>
+
+        <!-- ═══ Vault ═══ -->
+        <div id="view-vault" class="view">
+            <div class="card" style="padding: 14px; margin-bottom: 6px;">
+                <div class="card-label">Varredura</div>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="scan-target" placeholder="https://..." style="flex: 1;">
+                    <button class="btn btn-primary" id="btn-run-scan" style="width: auto; padding: 9px 16px;">Varrer</button>
+                </div>
+                <button class="btn btn-ghost" id="btn-run-scan-local" style="margin-top: 6px; font-size: 10px;">Varrer pasta local</button>
+            </div>
+
+            <div class="sub-seg">
+                <button class="sub-seg-btn active" id="tab-data">Resumo</button>
+                <button class="sub-seg-btn" id="tab-files">Arquivos</button>
+                <button class="sub-seg-btn" id="tab-monitor">Monitor</button>
+            </div>
+
+            <!-- Resumo -->
+            <div id="pane-data" style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="scan-progress" id="scan-progress">
+                    <div class="scan-progress-fill" id="scan-progress-fill"></div>
+                </div>
+                <div id="scan-score-area"></div>
+                <div id="scan-status-area"></div>
+                <div class="data-well" id="vault-results" style="max-height: none;">
+                    <div style="text-align: center; color: var(--text-3); font-size: 10px; padding: 20px 0;">Nenhum alvo varrido</div>
+                </div>
+                <button class="btn btn-ghost" id="btn-save-report" style="font-size: 10px;">Exportar JSON</button>
+            </div>
+
+            <!-- Arquivos -->
+            <div id="pane-files" style="display: none; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto;">
+                <div style="text-align: center; color: var(--text-3); font-size: 10px; padding: 20px 0;">Execute uma varredura primeiro</div>
+            </div>
+
+            <!-- Monitor -->
+            <div id="pane-monitor" style="display: none; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 320px;">
+                <div class="card" style="padding: 12px; margin-bottom: 0;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="pulse-dot" id="core-status-dot" style="background: var(--red);"></div>
+                            <span style="font-size: 11px; font-weight: 600;">Core Engine</span>
+                        </div>
+                        <span id="core-status-label" class="tag tag-red">Offline</span>
+                    </div>
+                    <div id="core-status-detail" style="font-size: 10px; color: var(--text-3); margin-top: 6px; font-family: var(--mono);">Sem conexão</div>
+                </div>
+
+                <div class="card" style="padding: 12px; margin-bottom: 0;">
+                    <div class="section-label">Histórico</div>
+                    <div id="vault-history" style="font-size: 10px; color: var(--text-3); font-family: var(--mono);">Nenhum scan</div>
+                </div>
+
+                <div class="card" style="padding: 12px; margin-bottom: 0;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <span class="section-label" style="padding: 0;">Acessos ao vivo</span>
+                        <span id="access-count" class="tag tag-blue">0</span>
+                    </div>
+                    <div class="data-well" id="live-feed" style="max-height: 110px; padding: 8px;">
+                        <div style="text-align: center; color: var(--text-3); font-size: 10px; padding: 10px 0;">Aguardando</div>
+                    </div>
+                </div>
+            </div>
+        <!-- ═══ Files (Vault) ═══ -->
+        <div id="view-files" class="view">
+            <div class="card">
+                <div class="card-label">Gerenciador de Arquivos</div>
+                <div class="card-title">Arquivos Extraídos</div>
+                <div class="card-desc">Lista completa de arquivos e dados sensíveis coletados durante as varreduras.</div>
+            </div>
+            <div id="main-files-list" class="data-well" style="flex: 1; overflow-y: auto; margin-top: 10px;">
+                <div style="text-align: center; color: var(--text-3); font-size: 10px; padding: 40px 0;">Nenhum arquivo disponível. Execute um scan primeiro.</div>
+            </div>
+        </div>
+
+        <!-- ═══ Tools ═══ -->
+        <div id="view-tools" class="view">
+            <div class="card" style="margin-bottom: 10px;">
+                <div class="card-label">Utilitários</div>
+                <div class="card-title">Ferramentas de Auditoria</div>
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <input type="text" id="tool-search" placeholder="Buscar ferramenta..." style="flex: 1; padding: 8px; font-size: 12px;">
+                </div>
+            </div>
+            <div id="tools-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; overflow-y: auto; flex: 1; padding-bottom: 20px;">
+                <!-- Tools will be injected here -->
+            </div>
+        </div>
+
+        <!-- ═══ Reports ═══ -->
+        <div id="view-reports" class="view">
+            <div class="card">
+                <div class="card-label">Relatórios</div>
+                <div class="card-title">Exportação de Dados</div>
+                <div class="card-desc">Gere documentos profissionais baseados nos dados coletados.</div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-ghost" id="export-json">
+                        <span>📄 JSON</span>
+                    </button>
+                    <button class="btn btn-ghost" id="export-csv">
+                        <span>📊 CSV</span>
+                    </button>
+                    <button class="btn btn-primary" id="export-pdf" style="grid-column: span 2;">
+                        <span>📕 Gerar PDF Completo</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 10px;">
+                <div class="card-label">Resumo do Alvo</div>
+                <div id="report-summary-content" style="font-size: 11px; color: var(--text-2); line-height: 1.5; margin-top: 10px;">
+                    Selecione um alvo no cofre para visualizar o resumo aqui.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="./node_modules/xterm/lib/xterm.js"></script>
+    <script src="./node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>

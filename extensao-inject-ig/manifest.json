@@ -1,0 +1,21 @@
+{
+"manifest_version": 3,
+"name": "inject-IG Stealth Loader",
+"version": "1.1",
+"description": "Injeta a ferramenta de auditoria furtiva em qualquer site.",
+"permissions": [
+"scripting"
+],
+"host_permissions": [
+"<all_urls>"
+],
+"content_scripts": [
+{
+"matches": [
+"<all_urls>"
+],
+"js": ["content.js"],
+"run_at": "document_end"
+}
+]
+}

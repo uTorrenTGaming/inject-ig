@@ -1,0 +1,33 @@
+{
+  "name": "inject-ig-console",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "iniciar inject-ig": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.inject-ig.console",
+    "productName": "inject-ig",
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^42.0.1",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9"
+  }
+}

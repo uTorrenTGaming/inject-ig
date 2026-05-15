@@ -1,0 +1,4 @@
+com/nexus/core_engine/service/IntelligenceScannerService.class
+com/nexus/core_engine/controller/NexusController.class
+com/nexus/core_engine/NexusCoreApplication.class
+com/nexus/core_engine/service/DataHarvesterService.class

