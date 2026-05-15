@@ -145,5 +145,5 @@ Esta ferramenta foi desenvolvida exclusivamente para fins educacionais e de audi
 ---
 
 <div align="center">
-  <p>Feito com ⚡ por Antigravity</p>
+  <p>Feito com ⚡ Igor</p>
 </div>
