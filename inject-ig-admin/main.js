@@ -19,12 +19,15 @@ app.whenReady().then(async () => {
     await connectDB();
     
     mainWindow = new BrowserWindow({
-        width: 1000,
+        width: 1050,
         height: 700,
         minWidth: 800,
         minHeight: 500,
+        center: true,
         titleBarStyle: 'hiddenInset',
-        backgroundColor: '#121214',
+        vibrancy: 'sidebar', // Apple HIG vibrancy for sidebar area
+        visualEffectState: 'active',
+        backgroundColor: '#00000000', // Transparent background to let vibrancy show
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
@@ -33,7 +36,6 @@ app.whenReady().then(async () => {
     });
 
     mainWindow.loadFile('index.html');
-    mainWindow.maximize();
 });
 
 ipcMain.handle('admin.getUsers', async () => {

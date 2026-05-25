@@ -5,16 +5,16 @@
     <title>C2 Enterprise Admin</title>
     <style>
         :root {
-            --bg: #000000;
-            --surface: rgba(28, 28, 30, 0.6);
+            --bg: transparent;
+            --surface: rgba(40, 40, 40, 0.4);
             --border: rgba(255, 255, 255, 0.1);
             --text-1: #ffffff;
-            --text-2: #a1a1aa;
+            --text-2: #ebebf599; /* Apple secondary label */
             --red: #ff453a;
             --green: #32d74b;
             --orange: #ff9f0a;
             --blue: #0a84ff;
-            --glass-bg: rgba(20, 20, 20, 0.65);
+            --glass-bg: rgba(30, 30, 30, 0.6);
             --glass-border: rgba(255, 255, 255, 0.08);
             --sidebar-width: 260px;
         }
@@ -24,11 +24,11 @@
         .sidebar {
             width: var(--sidebar-width);
             background: var(--glass-bg);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(40px); /* Stronger blur for Apple look */
             border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
-            padding: 20px 15px;
+            padding: 45px 15px 20px 15px; /* Added padding-top 45px for macOS traffic lights */
             -webkit-app-region: drag;
         }
 
@@ -83,7 +83,8 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: radial-gradient(circle at 50% 0%, rgba(28, 28, 30, 0.8) 0%, #000 100%);
+            background: rgba(18, 18, 20, 0.85); /* Dark native look without harsh gradient */
+            backdrop-filter: blur(20px);
             -webkit-app-region: drag;
         }
 
@@ -114,12 +115,12 @@
             background: var(--glass-bg);
             backdrop-filter: blur(25px);
             border: 1px solid var(--glass-border);
-            border-radius: 16px;
+            border-radius: 12px; /* Apple HIG radius */
             overflow-x: auto;
             box-shadow: 0 8px 32px rgba(0,0,0,0.4);
         }
 
-        table { width: 100%; min-width: 700px; border-collapse: collapse; }
+        table { width: 100%; min-width: 600px; border-collapse: collapse; table-layout: fixed; }
         th, td { padding: 16px 20px; text-align: left; border-bottom: 1px solid var(--glass-border); }
         th { font-size: 11px; text-transform: uppercase; color: var(--text-2); font-weight: 600; letter-spacing: 0.5px; background: rgba(255,255,255,0.01); }
         td { font-size: 14px; }
@@ -131,7 +132,7 @@
         
         .os-icon { width: 22px; height: 22px; opacity: 0.9; display: flex; align-items: center; justify-content: center; }
 
-        .hwid-tag { font-family: "SF Mono", monospace; font-size: 12px; color: var(--text-2); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+        .hwid-tag { font-family: "SF Mono", monospace; font-size: 12px; color: var(--text-2); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); display: inline-block; max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
         
         .status { padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.3px; }
         .status.active { background: rgba(50, 215, 75, 0.1); color: var(--green); border: 1px solid rgba(50, 215, 75, 0.2); }
@@ -140,8 +141,8 @@
 
         .actions { display: flex; gap: 8px; }
         button {
-            padding: 8px 14px;
-            border-radius: 8px;
+            padding: 6px 12px;
+            border-radius: 6px; /* Apple native button radius */
             border: none;
             font-size: 12px;
             font-weight: 600;
@@ -230,11 +231,11 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>OS</th>
-                                <th>Usuário</th>
-                                <th>Hardware ID</th>
-                                <th>Status</th>
-                                <th>Ações Táticas</th>
+                                <th style="width: 50px;">OS</th>
+                                <th style="width: 25%;">Usuário</th>
+                                <th style="width: 25%;">Hardware ID</th>
+                                <th style="width: 15%;">Status</th>
+                                <th style="width: 35%;">Ações Táticas</th>
                             </tr>
                         </thead>
                         <tbody id="user-table-body">
