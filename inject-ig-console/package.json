@@ -1,6 +1,6 @@
 {
   "name": "inject-ig-console",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "inject-ig — Sistema de Vigilância Digital",
   "main": "main.js",
   "scripts": {
@@ -30,9 +30,13 @@
     "files": [
       "main.js",
       "preload.js",
+      "preload-splash.js",
       "index.html",
+      "splash.html",
       "renderer.js",
+      "renderer_spectre.js",
       "logo.svg",
+      ".env",
       "src/**/*",
       "node_modules/**/*",
       "!node_modules/.cache/**/*",

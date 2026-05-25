@@ -46,17 +46,106 @@ function getDataDir() {
     return path.join(app.getPath('userData'), 'inject-ig-data');
 }
 
-// ═════ SYSTEM PATH (includes homebrew, etc.) ═════
-const ENV_PATH = [
-    '/usr/local/bin',
-    '/usr/bin',
-    '/bin',
-    '/opt/homebrew/bin',
-    '/opt/homebrew/sbin',
-    'C:\\Program Files\\Java\\jdk-21\\bin',
-    'C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.3.9-hotspot\\bin',
-    process.env.PATH || ''
-].join(process.platform === 'win32' ? ';' : ':');
+// ═════ SYSTEM PATH (cross-platform: mac, linux, windows) ═════
+const SEP = process.platform === 'win32' ? ';' : ':';
+
+// Monta lista de caminhos por plataforma
+const EXTRA_PATHS = [];
+
+if (process.platform === 'darwin') {
+    EXTRA_PATHS.push(
+        '/usr/local/bin',
+        '/usr/bin',
+        '/bin',
+        '/opt/homebrew/bin',
+        '/opt/homebrew/sbin',
+        '/usr/local/opt/openjdk/bin',
+        '/opt/homebrew/opt/openjdk/bin',
+        '/opt/homebrew/opt/openjdk@21/bin',
+        '/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home/bin'
+    );
+} else if (process.platform === 'linux') {
+    EXTRA_PATHS.push(
+        '/usr/local/bin',
+        '/usr/bin',
+        '/bin',
+        '/usr/sbin',
+        '/sbin',
+        '/usr/lib/jvm/java-21-openjdk-amd64/bin',
+        '/usr/lib/jvm/java-21-openjdk/bin',
+        '/usr/lib/jvm/java-21/bin',
+        '/usr/lib/jvm/temurin-21/bin',
+        '/usr/lib/jvm/java-17-openjdk-amd64/bin',
+        '/usr/lib/jvm/java-11-openjdk-amd64/bin',
+        '/snap/bin'
+    );
+} else if (process.platform === 'win32') {
+    EXTRA_PATHS.push(
+        'C:\\Windows\\System32',
+        'C:\\Windows',
+        'C:\\Program Files\\Java\\jdk-21\\bin',
+        'C:\\Program Files\\Java\\jdk-17\\bin',
+        'C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.3.9-hotspot\\bin',
+        'C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.11.9-hotspot\\bin',
+        'C:\\Program Files\\Microsoft\\jdk-21.0.0.35-hotspot\\bin',
+        'C:\\Program Files\\Amazon Corretto\\jdk21\\bin',
+        'C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath'
+    );
+    // Adiciona JAVA_HOME se definido
+    if (process.env.JAVA_HOME) EXTRA_PATHS.push(path.join(process.env.JAVA_HOME, 'bin'));
+}
+
+// Adiciona JAVA_HOME genérico se definido (qualquer plataforma)
+if (process.env.JAVA_HOME && process.platform !== 'win32') {
+    EXTRA_PATHS.push(path.join(process.env.JAVA_HOME, 'bin'));
+}
+
+const ENV_PATH = [...EXTRA_PATHS, process.env.PATH || ''].join(SEP);
+
+// ═════ JAVA BINARY FINDER ═════
+function findJavaBinary() {
+    const isWin = process.platform === 'win32';
+    const javaBin = isWin ? 'java.exe' : 'java';
+
+    // 1. Tenta JAVA_HOME direto
+    if (process.env.JAVA_HOME) {
+        const fromHome = path.join(process.env.JAVA_HOME, 'bin', javaBin);
+        if (fs.existsSync(fromHome)) return fromHome;
+    }
+
+    // 2. Busca nos caminhos extras
+    const searchPaths = EXTRA_PATHS;
+    for (const dir of searchPaths) {
+        const candidate = path.join(dir, javaBin);
+        try {
+            if (fs.existsSync(candidate)) return candidate;
+        } catch (e) {}
+    }
+
+    // 3. Fallback: assume que java está no PATH do sistema
+    return javaBin;
+}
+
+// ═════ PYTHON BINARY FINDER ═════
+function findPythonBinary() {
+    // No Windows, o executável é 'python' (sem o 3) por padrão
+    if (process.platform === 'win32') {
+        // Verifica se python3.exe existe primeiro
+        const py3Candidates = [
+            'C:\\Python312\\python.exe',
+            'C:\\Python311\\python.exe',
+            'C:\\Python310\\python.exe',
+            path.join(process.env.LOCALAPPDATA || '', 'Programs\\Python\\Python312\\python.exe'),
+            path.join(process.env.LOCALAPPDATA || '', 'Programs\\Python\\Python311\\python.exe'),
+        ];
+        for (const p of py3Candidates) {
+            if (fs.existsSync(p)) return p;
+        }
+        return 'python'; // Fallback ao PATH
+    }
+    // Mac e Linux: python3
+    return 'python3';
+}
 
 // ═════ SPLASH WINDOW ═════
 function createSplashWindow() {
@@ -189,13 +278,20 @@ function createMainWindow() {
         if (command === 'exit_app') { app.quit(); return; }
         if (command === 'min_app') { mainWindow && mainWindow.minimize(); return; }
 
-        const terminalCwd = isPackaged
-            ? app.getPath('userData')
-            : path.join(__dirname, '../inject-ig-engine');
+        // Determina o CWD correto — fallback para __dirname se a pasta não existir
+        let terminalCwd;
+        if (isPackaged) {
+            terminalCwd = app.getPath('userData');
+        } else {
+            const devEngineDir = path.join(__dirname, '../inject-ig-engine');
+            terminalCwd = fs.existsSync(devEngineDir) ? devEngineDir : __dirname;
+        }
 
         const childProc = exec(command, {
             cwd: terminalCwd,
-            env: { ...process.env, PATH: ENV_PATH }
+            env: { ...process.env, PATH: ENV_PATH },
+            // Windows: não abre janela de console
+            windowsHide: true
         });
 
         childProc.stdout.on('data', (data) => {
@@ -370,8 +466,10 @@ function createMainWindow() {
 
         const tmpFile = path.join(os.tmpdir(), 'inject_ig_screen.png');
 
-        usbCaptureProcess = spawn('python3', [scriptPath], {
-            env: { ...process.env, PATH: ENV_PATH }
+        const pythonBin = findPythonBinary();
+        usbCaptureProcess = spawn(pythonBin, [scriptPath], {
+            env: { ...process.env, PATH: ENV_PATH },
+            windowsHide: true
         });
 
         let resolved = false;
@@ -490,8 +588,8 @@ function startBackend(callback) {
     const dataDir = getDataDir();
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-    // Locate java binary
-    const javaBin = process.platform === 'win32' ? 'java.exe' : 'java';
+    // Locate java binary (cross-platform)
+    const javaBin = findJavaBinary();
 
     const jvmArgs = [
         '-Xms64m',           // Low initial heap for fast startup
@@ -514,6 +612,10 @@ function startBackend(callback) {
         }
     };
 
+    log.info(`[backend] Iniciando Java: ${javaBin}`);
+    log.info(`[backend] JAR: ${jarPath}`);
+    log.info(`[backend] Plataforma: ${process.platform}`);
+
     backendProcess = spawn(javaBin, jvmArgs, {
         env: { ...process.env, PATH: ENV_PATH },
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -532,6 +634,16 @@ function startBackend(callback) {
             mainWindow.webContents.send('terminal.incData', '\x1b[90m[server] ' + data.toString() + '\x1b[0m');
     });
     backendProcess.on('error', (err) => {
+        log.error(`[backend] Falha ao iniciar Java: ${err.message}`);
+        log.error(`[backend] Binário tentado: ${javaBin}`);
+        log.error(`[backend] PATH usado: ${ENV_PATH}`);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('terminal.incData',
+                `\x1b[31m[ERRO CRÍTICO] Não foi possível iniciar o Java!\x1b[0m\n` +
+                `\x1b[33m[dica] Instale o Java 21+ e certifique-se que está no PATH ou JAVA_HOME.\x1b[0m\n` +
+                `\x1b[90m[binário] ${javaBin}\x1b[0m\n`
+            );
+        }
         doneCallback(err);
     });
 

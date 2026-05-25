@@ -1,4 +1,14 @@
 const SERVER_URL = 'http://localhost:8080'; // CHANGE THIS TO YOUR CLOUD SERVER URL (e.g. https://api.yoursite.com)
+
+// ═══════ Polyfill: AbortSignal.timeout (não existe no Electron antigo no Linux) ═══════
+if (!AbortSignal.timeout) {
+    AbortSignal.timeout = (ms) => {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(new DOMException('TimeoutError', 'TimeoutError')), ms);
+        return controller.signal;
+    };
+}
+
 // ═══════════ Terminal Initialization ═══════════
 const term = new window.Terminal({
     cursorBlink: true,
@@ -1054,7 +1064,11 @@ document.getElementById('btn-run-scan')?.addEventListener('click', async () => {
         });
     } catch (err) {
         progressBar.classList.remove('active');
-        statusArea.innerHTML = `<div class="scan-status" style="color:var(--red)">❌ Core Engine offline</div>`;
+        const platform = navigator.platform || 'desconhecido';
+        statusArea.innerHTML = `<div class="scan-status" style="color:var(--red)">❌ Core Engine offline — Verifique se o Java está instalado (java -version no terminal)</div>`;
+        term.writeln(`\r\n\x1b[31m[CORE OFFLINE]\x1b[0m ${err.message}`);
+        term.writeln(`\x1b[33m[dica]\x1b[0m Certifique-se que o Java 21+ está instalado e no PATH.`);
+        term.prompt();
     }
 });
 
