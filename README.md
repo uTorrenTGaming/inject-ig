@@ -9,7 +9,7 @@ Todo o motor legado em Java e as lógicas em console solto foram DELETADAS e mig
 O banco de dados é a alma do sistema. Você precisa ter o serviço rodando localmente (ou na nuvem).
 Configuração padrão no `main.js`:
 - User: `postgres`
-- Password: `5127805124`
+- Password: ``
 
 As autenticações ocorrem de forma passiva: O Electron detecta o hash do seu Hardware (macOS, Windows ou Linux) usando `node-machine-id` e valida se o seu `is_banned` é verdadeiro. Se estiver banido, uma tela vermelha intrusiva bloqueará a interface e os comandos de navegação.
 
