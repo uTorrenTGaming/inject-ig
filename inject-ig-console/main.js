@@ -107,22 +107,40 @@ function findJavaBinary() {
     const isWin = process.platform === 'win32';
     const javaBin = isWin ? 'java.exe' : 'java';
 
-    // 1. Tenta JAVA_HOME direto
-    if (process.env.JAVA_HOME) {
-        const fromHome = path.join(process.env.JAVA_HOME, 'bin', javaBin);
-        if (fs.existsSync(fromHome)) return fromHome;
+    // 🥇 PRIORIDADE 1 — JRE BUNDLED dentro do app (quando empacotado)
+    // Localização: <app>/Contents/Resources/jre/bin/java  (Mac/Linux)
+    //              <install>/resources/jre/bin/java.exe   (Windows)
+    if (isPackaged) {
+        const bundledJava = path.join(process.resourcesPath, 'jre', 'bin', javaBin);
+        if (fs.existsSync(bundledJava)) {
+            log.info(`[backend] Usando JRE bundled: ${bundledJava}`);
+            return bundledJava;
+        }
+        log.warn(`[backend] JRE bundled não encontrado em: ${bundledJava}`);
     }
 
-    // 2. Busca nos caminhos extras
-    const searchPaths = EXTRA_PATHS;
-    for (const dir of searchPaths) {
+    // 🥈 PRIORIDADE 2 — JAVA_HOME definido pelo sistema
+    if (process.env.JAVA_HOME) {
+        const fromHome = path.join(process.env.JAVA_HOME, 'bin', javaBin);
+        if (fs.existsSync(fromHome)) {
+            log.info(`[backend] Usando Java via JAVA_HOME: ${fromHome}`);
+            return fromHome;
+        }
+    }
+
+    // 🥉 PRIORIDADE 3 — Busca em caminhos comuns por plataforma
+    for (const dir of EXTRA_PATHS) {
         const candidate = path.join(dir, javaBin);
         try {
-            if (fs.existsSync(candidate)) return candidate;
+            if (fs.existsSync(candidate)) {
+                log.info(`[backend] Java encontrado em: ${candidate}`);
+                return candidate;
+            }
         } catch (e) {}
     }
 
-    // 3. Fallback: assume que java está no PATH do sistema
+    // 🔚 FALLBACK — Assume que java está no PATH do sistema
+    log.warn(`[backend] Java não encontrado nos caminhos conhecidos. Tentando PATH do sistema.`);
     return javaBin;
 }
 

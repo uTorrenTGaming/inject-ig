@@ -1,26 +1,23 @@
 ; inject-ig NSIS Installer Script
-; This runs before/after the main NSIS installer
+; JRE 21 vem BUNDLED — nenhuma dependência externa necessária
 
-; Check if Java is installed on Windows
-!macro customInstall
-  ; Check for Java 11+
-  ReadRegStr $R0 HKLM "SOFTWARE\JavaSoft\JRE" "CurrentVersion"
-  ${If} $R0 == ""
-    ReadRegStr $R0 HKLM "SOFTWARE\JavaSoft\Java Runtime Environment" "CurrentVersion"
-  ${EndIf}
-  
-  ${If} $R0 == ""
-    MessageBox MB_YESNO|MB_ICONQUESTION \
-      "inject-ig requer Java 11 ou superior.$\n$\nDeseja abrir o site de download do Java agora?" \
-      IDYES downloadJava IDNO skipJava
-    downloadJava:
-      ExecShell "open" "https://adoptium.net/temurin/releases/?version=21"
-    skipJava:
-  ${EndIf}
+; Configura firewall do Windows para permitir a porta do backend
+!macro customInstallMode
+  ; Permite porta 8080 no Windows Firewall silenciosamente
+  ExecWait 'netsh advfirewall firewall add rule name="inject-ig Server" dir=in action=allow protocol=tcp localport=8080' $0
 !macroend
 
-; Configure Windows Firewall to allow the backend port
-!macro customInstallMode
-  ; Allow port 8080 through Windows Firewall silently
-  ExecWait 'netsh advfirewall firewall add rule name="inject-ig Server" dir=in action=allow protocol=tcp localport=8080' $0
+!macro customInstall
+  ; Cria atalho na área de trabalho
+  CreateShortcut "$DESKTOP\inject-ig.lnk" "$INSTDIR\inject-ig.exe" "" "$INSTDIR\inject-ig.exe" 0
+  
+  ; Torna o JRE bundled executável (define permissão se necessário)
+  ; O JRE está em $INSTDIR\resources\jre\bin\java.exe — pronto para uso sem instalar
+!macroend
+
+!macro customUnInstall
+  ; Remove atalho da área de trabalho ao desinstalar
+  Delete "$DESKTOP\inject-ig.lnk"
+  ; Remove regra do firewall
+  ExecWait 'netsh advfirewall firewall delete rule name="inject-ig Server"' $0
 !macroend

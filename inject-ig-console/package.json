@@ -1,11 +1,13 @@
 {
   "name": "inject-ig-console",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "inject-ig — Sistema de Vigilância Digital",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
+    "download:jre": "node scripts/download-jre.js",
+    "setup:full": "npm run download:jre && npm run build:all",
     "build:mac": "electron-builder --mac --x64",
     "build:win": "electron-builder --win --x64",
     "build:linux": "electron-builder --linux",
@@ -48,10 +50,6 @@
       "output": "../dist.nosync",
       "buildResources": "assets"
     },
-    "extraResources": [
-      "backend/**/*",
-      "engine/**/*"
-    ],
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
@@ -67,6 +65,14 @@
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "entitlements": null,
+      "extraResources": [
+        "backend/**/*",
+        "engine/**/*",
+        {
+          "from": "jre/mac",
+          "to": "jre"
+        }
+      ],
       "extendInfo": {
         "NSCameraUsageDescription": "Captura de tela do dispositivo via USB",
         "NSMicrophoneUsageDescription": "Análise de dados USB"
@@ -100,22 +106,44 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "extraResources": [
+        "backend/**/*",
+        "engine/**/*",
+        {
+          "from": "jre/win",
+          "to": "jre"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "inject-ig",
+      "include": "assets/installer.nsh"
     },
     "linux": {
       "target": [
         "AppImage",
         "deb"
       ],
-      "icon": "assets/icons"
+      "icon": "assets/icons",
+      "extraResources": [
+        "backend/**/*",
+        "engine/**/*",
+        {
+          "from": "jre/linux",
+          "to": "jre"
+        }
+      ]
     }
   },
   "keywords": [],
