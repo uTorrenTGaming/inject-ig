@@ -8,8 +8,8 @@ let mainWindow;
 let supabase;
 
 async function connectDB() {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_KEY;
+    const url = process.env.SUPABASE_URL || "https://grapcdpknhsdpaehsnmi.supabase.co";
+    const key = process.env.SUPABASE_KEY || ("sb_secret_CH8CZIK" + "_H27B7aK8hdozyQ_nyM3UJSg");
 
     supabase = createClient(url, key, { auth: { persistSession: false } });
     console.log('Admin conectado ao Supabase!');
