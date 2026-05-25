@@ -1,0 +1,6 @@
+{
+  "appId": "com.nexus.agent",
+  "appName": "Nexus Agent",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}

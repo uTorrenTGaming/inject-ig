@@ -1,0 +1,144 @@
+{
+  "name": "inject-ig-console",
+  "version": "2.0.0",
+  "description": "inject-ig — Sistema de Vigilância Digital",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build:mac": "electron-builder --mac --x64",
+    "build:win": "electron-builder --win --x64",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --mac --win --linux",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-rebuild"
+  },
+  "build": {
+    "appId": "com.injectig.console",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "uTorrenTGaming",
+        "repo": "inject-ig"
+      }
+    ],
+    "productName": "inject-ig",
+    "copyright": "Copyright © 2026 inject-ig",
+    "asar": true,
+    "compression": "maximum",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "logo.svg",
+      "src/**/*",
+      "node_modules/**/*",
+      "!node_modules/.cache/**/*",
+      "!node_modules/electron/**/*",
+      "!node_modules/electron-builder/**/*",
+      "!node_modules/electron-rebuild/**/*"
+    ],
+    "directories": {
+      "output": "../dist.nosync",
+      "buildResources": "assets"
+    },
+    "extraResources": [
+      "backend/**/*",
+      "engine/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "darkModeSupport": true,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "entitlements": null,
+      "extendInfo": {
+        "NSCameraUsageDescription": "Captura de tela do dispositivo via USB",
+        "NSMicrophoneUsageDescription": "Análise de dados USB"
+      }
+    },
+    "dmg": {
+      "title": "inject-ig ${version}",
+      "background": null,
+      "window": {
+        "width": 540,
+        "height": 360
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 180,
+          "type": "file"
+        },
+        {
+          "x": 390,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icons"
+    }
+  },
+  "keywords": [],
+  "author": {
+    "name": "Igor Gomes",
+    "email": "igor@example.com"
+  },
+  "homepage": "https://github.com/inject-ig",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/device": "^8.0.2",
+    "@capacitor/geolocation": "^8.2.0",
+    "@capacitor/ios": "^8.3.4",
+    "@capacitor/network": "^8.0.1",
+    "@supabase/supabase-js": "^2.106.1",
+    "dotenv": "^17.4.2",
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.3",
+    "node-machine-id": "^1.1.12",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "electron": "^42.0.1",
+    "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9"
+  }
+}

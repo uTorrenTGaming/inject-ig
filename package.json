@@ -1,0 +1,20 @@
+{
+  "dependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "firebase": "^12.13.0"
+  },
+  "name": "seguranca",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">   <img src=\"./inject-ig-console/logo.svg\" width=\"150\" alt=\"Inject-IG Logo\">   <br>   <p><i>The Next-Gen Enterprise-Grade Runtime Auditing, Telemetry & Device Intelligence Suite.</i></p>",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:mac": "npm --prefix inject-ig-console run build:mac",
+    "build:win": "npm --prefix inject-ig-console run build:win",
+    "build:all": "npm --prefix inject-ig-console run build:all"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
