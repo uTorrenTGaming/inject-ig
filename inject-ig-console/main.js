@@ -241,6 +241,12 @@ function createMainWindow() {
             if (userCheck && userCheck.is_banned) {
                 return { success: false, banned: true, message: 'Seu computador foi banido.' };
             }
+
+            // Check License DRM
+            const hasLicense = await db.hasValidLicense(hwid);
+            if (!hasLicense) {
+                return { success: false, requireLicense: true };
+            }
             
             const os_type = process.platform; // 'darwin', 'win32', 'linux'
 
@@ -256,6 +262,14 @@ function createMainWindow() {
             }
 
             return { success: false, needsRegistration: true };
+        } catch (e) {
+            return { success: false, message: e.message };
+        }
+    });
+
+    ipcMain.handle('system.activateLicense', async (event, key, hwid) => {
+        try {
+            return await db.activateLicense(key, hwid);
         } catch (e) {
             return { success: false, message: e.message };
         }

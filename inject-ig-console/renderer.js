@@ -1873,6 +1873,17 @@ function showBannedScreen(hwid) {
     bannedHwidDisplay.innerText = hwid || 'HWID_UNKNOWN';
 }
 
+function showLicenseScreen() {
+    authView.classList.remove('active');
+    authView.style.display = 'none';
+    
+    const licenseView = document.getElementById('view-license');
+    if (licenseView) {
+        licenseView.classList.add('active');
+        licenseView.style.display = 'flex';
+    }
+}
+
 // ── Auto Login on Load ──
 window.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -1881,6 +1892,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         // Attempt auto login (no username provided)
         const res = await window.electronAPI.authLoginOrRegister(currentHWID, null, null);
         
+        if (res.requireLicense) {
+            showLicenseScreen();
+            return;
+        }
+
         if (res.success && res.user) {
             // Em vez de conceder acesso automático, mostra a tela para confirmar
             document.querySelector('#step-setup-profile .card-title').innerText = 'Bem-vindo de volta';
@@ -1932,6 +1948,11 @@ document.getElementById('btn-enter-system').addEventListener('click', async () =
     try {
         const res = await window.electronAPI.authLoginOrRegister(currentHWID, username, currentAvatarUrl);
         
+        if (res.requireLicense) {
+            showLicenseScreen();
+            return;
+        }
+
         if (res.success && res.user) {
             errorMsg.style.display = 'none';
             grantAccess(res.user);
@@ -1949,6 +1970,62 @@ document.getElementById('btn-enter-system').addEventListener('click', async () =
         btn.disabled = false;
     }
 });
+
+// ── License Activation ──
+const btnActivateLicense = document.getElementById('btn-activate-license');
+if (btnActivateLicense) {
+    btnActivateLicense.addEventListener('click', async () => {
+        const input = document.getElementById('license-key-input');
+        const errorMsg = document.getElementById('license-error-msg');
+        const key = input.value.trim();
+
+        if (!key) {
+            errorMsg.innerText = 'Por favor, insira a chave do produto.';
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        const originalHtml = btnActivateLicense.innerHTML;
+        btnActivateLicense.innerHTML = '<span style="color: var(--text-2);">Validando...</span>';
+        btnActivateLicense.disabled = true;
+
+        try {
+            const res = await window.electronAPI.activateLicense(key, currentHWID);
+            
+            if (res.success) {
+                // Sucesso! Volta para a tela de login/perfil
+                errorMsg.style.display = 'none';
+                
+                const licenseView = document.getElementById('view-license');
+                if (licenseView) {
+                    licenseView.classList.remove('active');
+                    licenseView.style.display = 'none';
+                }
+                
+                // Recarrega o fluxo de login
+                authView.classList.add('active');
+                authView.style.display = 'flex';
+                
+                // Força uma rechecagem para puxar o perfil atual ou criar novo
+                const loginRes = await window.electronAPI.authLoginOrRegister(currentHWID, null, null);
+                if (loginRes.success && loginRes.user) {
+                    document.getElementById('setup-username').value = loginRes.user.username;
+                    const btnEnter = document.getElementById('btn-enter-system');
+                    btnEnter.innerText = `Logar como ${loginRes.user.username}`;
+                }
+            } else {
+                errorMsg.innerText = res.message || 'Chave inválida.';
+                errorMsg.style.display = 'block';
+            }
+        } catch (error) {
+            errorMsg.innerText = 'Erro ao contactar o servidor.';
+            errorMsg.style.display = 'block';
+        } finally {
+            btnActivateLicense.innerHTML = originalHtml;
+            btnActivateLicense.disabled = false;
+        }
+    });
+}
 
 // ── Avatar Picker UI Logic ──
 document.getElementById('profile-avatar')?.addEventListener('click', () => {

@@ -670,6 +670,24 @@
             </div>
         </div>
 
+        <!-- License / Activation View -->
+        <div id="view-license" class="view" style="display: none; align-items: center; justify-content: center; height: 100%;">
+            <div class="card" style="width: 340px; text-align: center; margin-top: -50px;">
+                <svg width="44" height="32" viewBox="0 0 44 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 15px;">
+                    <rect x="0" y="0" width="44" height="32" rx="6" fill="rgba(59,130,246,0.12)"/>
+                    <path d="M16 14C16 10.6863 18.6863 8 22 8C25.3137 8 28 10.6863 28 14V16H29C30.1046 16 31 16.8954 31 18V26C31 27.1046 30.1046 28 29 28H15C13.8954 28 13 27.1046 13 26V18C13 16.8954 13.8954 16 15 16H16V14ZM18 14V16H26V14C26 11.7909 24.2091 10 22 10C19.7909 10 18 11.7909 18 14ZM21 21V23H23V21H21Z" fill="#3b82f6"/>
+                </svg>
+
+                <div class="card-title" style="font-size: 18px;">Ativação do Produto</div>
+                <div class="card-desc" style="font-size: 11px; margin-bottom: 20px;">Uma chave de licença válida é necessária para liberar o núcleo do sistema nesta máquina.</div>
+                
+                <input type="text" id="license-key-input" placeholder="XXXX-XXXX-XXXX-XXXX" style="margin-bottom: 15px; width: 100%; text-align: center; font-size: 14px; letter-spacing: 2px; text-transform: uppercase;">
+                
+                <button class="btn btn-primary" id="btn-activate-license">Validar Chave</button>
+                <div id="license-error-msg" style="color: var(--red); font-size: 11px; margin-top: 10px; display: none;">Chave inválida.</div>
+            </div>
+        </div>
+
         <!-- ═══ Terminal ═══ -->
         <div id="view-terminal" class="view" style="gap: 10px; height: 100%; overflow: hidden;">
             <div class="terminal-wrap" id="terminal-container" style="flex: 1;"></div>
