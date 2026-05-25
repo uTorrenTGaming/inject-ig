@@ -1,7 +1,6 @@
 {
   "name": "inject-ig-console",
-  "version": "2.0.1",
-  "description": "C2 Management Console",
+  "version": "2.0.2",
   "description": "inject-ig — Sistema de Vigilância Digital",
   "main": "main.js",
   "scripts": {
