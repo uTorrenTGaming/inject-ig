@@ -1,0 +1,17 @@
+{
+  "name": "inject-ig-admin",
+  "version": "1.0.0",
+  "description": "Painel Administrativo Oculto",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.1",
+    "dotenv": "^17.4.2",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "electron": "^28.2.1"
+  }
+}
