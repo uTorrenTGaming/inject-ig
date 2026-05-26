@@ -1852,6 +1852,36 @@ function grantAccess(user) {
                     mainTerminalView.style.display = 'none';
                     
                     showBannedScreen(currentHWID);
+                    return;
+                }
+
+                // Verifica status da Licença (Auto-Logout)
+                const license = await window.electronAPI.getLicenseInfo(currentHWID);
+                let validLicense = false;
+                if (license && license.is_active) {
+                    if (license.expires_at) {
+                        if (new Date() < new Date(license.expires_at)) {
+                            validLicense = true;
+                        }
+                    } else {
+                        validLicense = true;
+                    }
+                }
+                
+                if (!validLicense) {
+                    clearInterval(window.banHeartbeat);
+                    window.banHeartbeat = null;
+                    
+                    mainTitlebar.style.display = 'none';
+                    mainToolbar.style.display = 'none';
+                    
+                    document.querySelectorAll('.view').forEach(v => {
+                        v.classList.remove('active');
+                        v.style.display = 'none';
+                    });
+                    
+                    showLicenseScreen();
+                    return;
                 }
             }
         }, 10000);
