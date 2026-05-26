@@ -16,56 +16,68 @@ class DatabaseManager {
         throw new Error('SUPABASE_URL ou SUPABASE_KEY não definidos no .env');
       }
 
+      // Cria o cliente — a partir daqui já está funcional para queries
       this.client = createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: { persistSession: false }
       });
 
-      // Testa a conexão criando a tabela se não existir
-      await this.initSchema();
+      // initSchema é opcional — falha silenciosa não bloqueia o login
+      try {
+        await this.initSchema();
+      } catch (schemaErr) {
+        console.warn('initSchema falhou (não crítico):', schemaErr.message);
+      }
+
       console.log('Conectado ao Supabase com sucesso!');
       return true;
     } catch (error) {
       console.error('Falha ao conectar ao Supabase:', error.message);
-      this.client = null;
-      throw error;
+      // NÃO zeramos this.client se já foi criado — preservamos a conexão
+      if (!this.client) throw error;
+      return true;
     }
   }
 
   async initSchema() {
-    // Cria a tabela users se ela não existir via RPC SQL
-    const { error } = await this.client.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          hwid TEXT UNIQUE NOT NULL,
-          username TEXT NOT NULL,
-          avatar_url TEXT,
-          is_banned BOOLEAN DEFAULT FALSE,
-          ban_expires_at TIMESTAMP NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+    try {
+      // Cria a tabela users se ela não existir via RPC SQL
+      const { error } = await this.client.rpc('exec_sql', {
+        sql: `
+          CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            hwid TEXT UNIQUE NOT NULL,
+            username TEXT NOT NULL,
+            avatar_url TEXT,
+            is_banned BOOLEAN DEFAULT FALSE,
+            ban_expires_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
 
-        CREATE TABLE IF NOT EXISTS licenses (
-          id SERIAL PRIMARY KEY,
-          key TEXT UNIQUE NOT NULL,
-          hwid_vinculado TEXT NULL,
-          is_active BOOLEAN DEFAULT TRUE,
-          duration_days INTEGER NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          activated_at TIMESTAMP NULL,
-          expires_at TIMESTAMP NULL
-        );
-      `
-    });
-    // Ignora erro se a função RPC não existir — a tabela pode já existir
-    if (error && !error.message.includes('already exists')) {
-      console.warn('Schema init via RPC falhou (normal na primeira vez):', error.message);
+          CREATE TABLE IF NOT EXISTS licenses (
+            id SERIAL PRIMARY KEY,
+            key TEXT UNIQUE NOT NULL,
+            hwid_vinculado TEXT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            duration_days INTEGER NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            activated_at TIMESTAMP NULL,
+            expires_at TIMESTAMP NULL
+          );
+        `
+      });
+      // Ignora erro se a função RPC não existir — a tabela pode já existir
+      if (error && !error.message.includes('already exists')) {
+        console.warn('Schema init via RPC falhou (normal na primeira vez):', error.message);
+      }
+    } catch (err) {
+      console.warn('Network ou falha crítica no initSchema:', err.message);
     }
   }
 
   async findUserByHWID(hwid) {
     try {
+      if (!this.client) await this.connect();
       const { data, error } = await this.client
         .from('users')
         .select('*')
@@ -107,6 +119,7 @@ class DatabaseManager {
 
   async registerOrUpdateUser(hwid, username, avatar_url, os_type) {
     try {
+      if (!this.client) await this.connect();
       const { data, error } = await this.client
         .from('users')
         .upsert(
@@ -128,6 +141,7 @@ class DatabaseManager {
 
   async hasValidLicense(hwid) {
     try {
+      if (!this.client) await this.connect();
       const { data, error } = await this.client
         .from('licenses')
         .select('*')
@@ -163,6 +177,7 @@ class DatabaseManager {
 
   async getLicenseInfo(hwid) {
     try {
+      if (!this.client) await this.connect();
       const { data, error } = await this.client
         .from('licenses')
         .select('*')
@@ -181,6 +196,7 @@ class DatabaseManager {
 
   async activateLicense(key, hwid) {
     try {
+      if (!this.client) await this.connect();
       // 1. Busca a licença pela chave
       const { data: license, error: fetchError } = await this.client
         .from('licenses')

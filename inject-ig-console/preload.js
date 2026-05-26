@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     onTerminalData: (callback) => ipcRenderer.on('terminal.incData', (_event, data) => callback(data)),
@@ -20,6 +20,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectLocalTargetFolder: () => ipcRenderer.invoke('c2.selectTargetFolder'),
     selectScanFolder: () => ipcRenderer.invoke('c2.selectScanFolder'),
     injectPayloadLocal: (folderPath) => ipcRenderer.invoke('c2.injectPayloadLocal', folderPath),
+    createScript: (data) => ipcRenderer.invoke('api.createScript', data),
+    
+    // PDF & File Studio
+    convertFile: (file, format) => {
+        let filePath = file;
+        if (file && typeof file === 'object') {
+            try {
+                filePath = webUtils.getPathForFile(file);
+            } catch (err) {
+                filePath = file.path;
+            }
+        }
+        return ipcRenderer.invoke('file.convert', filePath, format);
+    },
+    
+    // Agente IG (IA)
+    sendChatMessage: (text, model) => ipcRenderer.invoke('c2.sendChatMessage', text, model),
+    getChatHistory: () => ipcRenderer.invoke('c2.getChatHistory'),
     saveReport: (data) => ipcRenderer.invoke('c2.saveReport', data),
     
     // Novas rotas de Deployment Mobile

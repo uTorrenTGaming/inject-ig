@@ -1,6 +1,6 @@
-require('dotenv').config();
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const fs = require('fs');
 const os = require('os');
 const { exec, spawn } = require('child_process');
@@ -201,13 +201,9 @@ function createMainWindow() {
     mainWindow = new BrowserWindow({
         width: 450,
         height: 600,
-        show: true, // Force show for debugging
+        show: false, // Oculto até o splash terminar
         backgroundColor: '#07080d',
-        // transparent: true,
-        // vibrancy: process.platform === 'darwin' ? 'fullscreen-ui' : undefined,
-        // visualEffectState: 'active',
         titleBarStyle: 'hiddenInset',
-        // frame: false,
         alwaysOnTop: false,
         resizable: true,
         webPreferences: {
@@ -218,13 +214,11 @@ function createMainWindow() {
     });
 
     mainWindow.loadFile('index.html');
+}
 
-    mainWindow.once('ready-to-show', () => {
-        // Main window is loaded — will be shown after backend is ready
-    });
-
-    // ── IPC Auth ─────────────────────────────────────────────────────────────
-    // ── IPC Auth (HWID Base) ──────────────────────────────────────────────────
+// ═════ IPC HANDLERS (registrados uma única vez) ═════
+function setupIpcHandlers() {
+    // ── Auth & HWID ──
     ipcMain.handle('hwid.get', async () => {
         try {
             return machineIdSync();
@@ -236,31 +230,23 @@ function createMainWindow() {
 
     ipcMain.handle('auth.loginOrRegister', async (event, hwid, username, avatar_url) => {
         try {
-            // First check if user is banned
+            if (!db.client) await db.connect();
             const userCheck = await db.findUserByHWID(hwid);
             if (userCheck && userCheck.is_banned) {
                 return { success: false, banned: true, message: 'Seu computador foi banido.' };
             }
-
-            // Check License DRM
             const hasLicense = await db.hasValidLicense(hwid);
             if (!hasLicense) {
                 return { success: false, requireLicense: true };
             }
-            
-            const os_type = process.platform; // 'darwin', 'win32', 'linux'
-
-            // If username is provided, register/update
+            const os_type = process.platform;
             if (username) {
                 const user = await db.registerOrUpdateUser(hwid, username, avatar_url, os_type);
                 return { success: true, user };
             }
-
-            // If no username provided (auto-login attempt), return user if exists
             if (userCheck) {
                 return { success: true, user: userCheck };
             }
-
             return { success: false, needsRegistration: true };
         } catch (e) {
             return { success: false, message: e.message };
@@ -268,40 +254,26 @@ function createMainWindow() {
     });
 
     ipcMain.handle('system.activateLicense', async (event, key, hwid) => {
-        try {
-            return await db.activateLicense(key, hwid);
-        } catch (e) {
-            return { success: false, message: e.message };
-        }
+        try { return await db.activateLicense(key, hwid); }
+        catch (e) { return { success: false, message: e.message }; }
     });
 
     ipcMain.handle('auth.getLicenseInfo', async (event, hwid) => {
-        try {
-            return await db.getLicenseInfo(hwid);
-        } catch (e) {
-            return null;
-        }
+        try { return await db.getLicenseInfo(hwid); }
+        catch (e) { return null; }
     });
 
     ipcMain.handle('auth.checkBanStatus', async (event, hwid) => {
-        try {
-            return await db.checkBanStatus(hwid);
-        } catch (e) {
-            console.error('Error checking ban status:', e);
-            return false;
-        }
+        try { return await db.checkBanStatus(hwid); }
+        catch (e) { console.error('Error checking ban status:', e); return false; }
     });
 
     ipcMain.handle('system.getGPUInfo', async () => {
-        try {
-            return await app.getGPUInfo('complete');
-        } catch (e) {
-            console.error('GPU Info Error:', e);
-            return null;
-        }
+        try { return await app.getGPUInfo('complete'); }
+        catch (e) { console.error('GPU Info Error:', e); return null; }
     });
 
-    // ── IPC Window Controls ──────────────────────────────────────────────────
+    // ── Window Controls ──
     ipcMain.on('window.close', () => { if (mainWindow) mainWindow.close(); });
     ipcMain.on('window.minimize', () => { if (mainWindow) mainWindow.minimize(); });
     ipcMain.on('window.maximize', () => {
@@ -311,14 +283,11 @@ function createMainWindow() {
         }
     });
 
-    // ── Terminal Smart Shell ─────────────────────────────────────────────────
+    // ── Terminal ──
     ipcMain.on('terminal.keystroke', (event, command) => {
         if (!command || command.trim() === '') return;
-
         if (command === 'exit_app') { app.quit(); return; }
         if (command === 'min_app') { mainWindow && mainWindow.minimize(); return; }
-
-        // Determina o CWD correto — fallback para __dirname se a pasta não existir
         let terminalCwd;
         if (isPackaged) {
             terminalCwd = app.getPath('userData');
@@ -326,14 +295,7 @@ function createMainWindow() {
             const devEngineDir = path.join(__dirname, '../inject-ig-engine');
             terminalCwd = fs.existsSync(devEngineDir) ? devEngineDir : __dirname;
         }
-
-        const childProc = exec(command, {
-            cwd: terminalCwd,
-            env: { ...process.env, PATH: ENV_PATH },
-            // Windows: não abre janela de console
-            windowsHide: true
-        });
-
+        const childProc = exec(command, { cwd: terminalCwd, env: { ...process.env, PATH: ENV_PATH }, windowsHide: true });
         childProc.stdout.on('data', (data) => {
             if (mainWindow && !mainWindow.isDestroyed())
                 mainWindow.webContents.send('terminal.incData', data.toString());
@@ -348,12 +310,11 @@ function createMainWindow() {
         });
     });
 
-    // ── C2 Handlers ─────────────────────────────────────────────────────────
+    // ── C2 Handlers ──
     ipcMain.handle('c2.selectTargetFolder', async () => {
         const r = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'], title: 'Selecione a pasta do projeto Alvo' });
         return r.canceled ? null : r.filePaths[0];
     });
-
     ipcMain.handle('c2.selectScanFolder', async () => {
         const r = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'], title: 'Selecione a pasta para Varredura' });
         return r.canceled ? null : r.filePaths[0];
@@ -369,27 +330,22 @@ function createMainWindow() {
             ];
             const targetFile = targets.find(fs.existsSync);
             if (!targetFile) return { success: false, message: 'Nenhum arquivo alvo encontrado.' };
-
             const overlayDist = isPackaged
                 ? path.join(process.resourcesPath, 'overlay-ui/dist/assets')
                 : path.join(__dirname, '../inject-ig-engine/overlay-ui/dist/assets');
             if (!fs.existsSync(overlayDist)) return { success: false, message: 'Build do overlay-ui não encontrado.' };
-
             const files = fs.readdirSync(overlayDist);
             const jsFile = files.find(f => f.endsWith('.js'));
             const cssFile = files.find(f => f.endsWith('.css'));
             const jsContent = jsFile ? fs.readFileSync(path.join(overlayDist, jsFile), 'utf8') : '';
             const cssContent = cssFile ? fs.readFileSync(path.join(overlayDist, cssFile), 'utf8') : '';
-
             const payload = `\n<!-- INJECT-IG MOD MENU INJECTION -->\n<style>\n${cssContent}\n</style>\n<script>\n${jsContent}\n</script>\n`;
             let content = fs.readFileSync(targetFile, 'utf8');
             if (content.includes('INJECT-IG MOD MENU')) return { success: false, message: 'Já injetado!' };
             content = content.includes('</body>') ? content.replace('</body>', payload + '</body>') : content + payload;
             fs.writeFileSync(targetFile, content);
             return { success: true, message: `Injetado com sucesso em:\n${targetFile}`, file: targetFile };
-        } catch (e) {
-            return { success: false, message: 'Erro: ' + e.message };
-        }
+        } catch (e) { return { success: false, message: 'Erro: ' + e.message }; }
     });
 
     ipcMain.handle('c2.getMobileDevices', async () => {
@@ -397,7 +353,6 @@ function createMainWindow() {
             let devices = [];
             let done = 0;
             const finish = () => { if (++done >= 2) resolve(devices.length ? { success: true, devices } : { success: false, message: 'Nenhum dispositivo detectado.', devices: [] }); };
-
             exec('adb devices', { env: { ...process.env, PATH: ENV_PATH } }, (err, stdout) => {
                 if (!err && stdout) {
                     stdout.split('\n').slice(1).map(l => l.trim()).filter(l => l).forEach(line => {
@@ -407,7 +362,6 @@ function createMainWindow() {
                 }
                 finish();
             });
-
             if (process.platform === 'darwin') {
                 exec('system_profiler SPUSBDataType', (err, stdout) => {
                     if (!err && stdout) {
@@ -424,9 +378,7 @@ function createMainWindow() {
                     }
                     finish();
                 });
-            } else {
-                finish();
-            }
+            } else { finish(); }
         });
     });
 
@@ -435,15 +387,12 @@ function createMainWindow() {
         if (!deviceId) return { success: false, message: 'Nenhum dispositivo USB selecionado.' };
         if (!platform) platform = 'android';
         if (platform === 'ios' && process.platform !== 'darwin') return { success: false, message: 'Compilação iOS só em Mac.' };
-
         return new Promise((resolve) => {
             const capInit = `if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then npm init -y && npm install @capacitor/core @capacitor/cli && npx --yes cap init "App Inject" "com.inject.app" --web-dir .; fi`;
             let script = platform === 'android'
                 ? `cd "${folderPath}" && ${capInit} && npx --yes cap add android && npx --yes cap sync android && npx --yes cap run android --target ${deviceId}`
                 : `cd "${folderPath}" && ${capInit} && npx --yes cap add ios && npx --yes cap sync ios && npx --yes cap run ios --target ${deviceId}`;
-
             const child = exec(script, { env: { ...process.env, PATH: ENV_PATH } });
-
             child.stdout.on('data', d => mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.send('terminal.incData', '\x1b[35m[MOBILE]\x1b[0m ' + d.toString().replace(/\n/g, '\r\n')));
             child.stderr.on('data', d => mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.send('terminal.incData', '\x1b[31m[MOBILE ERRO]\x1b[0m ' + d.toString().replace(/\n/g, '\r\n')));
             child.on('close', code => resolve(code === 0
@@ -494,24 +443,91 @@ function createMainWindow() {
         setTimeout(() => resolve({ success: false, message: 'Timeout ao gerar túnel.' }), 10000);
     }));
 
-    // ── USB Screen Capture ───────────────────────────────────────────────────
-    let usbCaptureProcess = null;
+    // ── Agente IG (IA) ──
+    const getChatHistoryPath = () => path.join(app.getPath('userData'), 'ig_chat_history.json');
 
+    ipcMain.handle('c2.getChatHistory', async () => {
+        try {
+            const p = getChatHistoryPath();
+            if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8'));
+            return [];
+        } catch (e) { return []; }
+    });
+
+    ipcMain.handle('c2.sendChatMessage', async (event, text, model) => {
+        try {
+            let replyText = 'Não consegui entender.';
+            let respondingModelName = 'Agente IG';
+            if (model === 'groq-llama3') {
+                if (!process.env.GROQ_API_KEY) return { text: '⚠️ GROQ_API_KEY não encontrada no .env.', modelName: 'Sistema' };
+                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: text }] })
+                });
+                const json = await res.json();
+                replyText = json.choices?.[0]?.message?.content || 'Erro na resposta do Groq.';
+                respondingModelName = 'Llama 3 (Groq)';
+            } else if (model.startsWith('github-')) {
+                // Rota para GitHub Models
+                if (!process.env.GH_TOKEN) return { text: "⚠️ Erro: GH_TOKEN não encontrada no .env. Adicione um token do GitHub para usar este modelo.", modelName: "Sistema" };
+                const actualModel = model.replace('github-', '');
+                const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${process.env.GH_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: actualModel, messages: [{role: 'user', content: text}] })
+                });
+                const json = await res.json();
+                replyText = json.choices?.[0]?.message?.content || `Erro na resposta do GitHub Models (${actualModel}).`;
+                respondingModelName = actualModel + " (GitHub)";
+            } else if (model.includes(':free')) {
+                if (!process.env.OPENROUTER_API_KEY) return { text: '⚠️ OPENROUTER_API_KEY não encontrada no .env.', modelName: 'Sistema' };
+                const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://github.com/uTorrenTGaming/inject-ig', 'X-Title': 'Inject-IG Agent' },
+                    body: JSON.stringify({ model, messages: [{ role: 'user', content: text }] })
+                });
+                const json = await res.json();
+                replyText = json.choices?.[0]?.message?.content || `Erro na resposta do OpenRouter (${model}).`;
+                respondingModelName = model.split('/')[1] || model;
+            } else {
+                const customUrl = process.env.CUSTOM_API_URL || 'http://localhost:5000/chat';
+                try {
+                    const res = await fetch(customUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CUSTOM_API_KEY || ''}` },
+                        body: JSON.stringify({ message: text })
+                    });
+                    const json = await res.json();
+                    replyText = json.reply || json.response || json.message || 'Sucesso.';
+                    respondingModelName = 'Custom API';
+                } catch (err) {
+                    replyText = `⚠️ Erro na API Customizada (${customUrl}).`;
+                    respondingModelName = 'Sistema';
+                }
+            }
+            const p = getChatHistoryPath();
+            let history = [];
+            if (fs.existsSync(p)) { try { history = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) {} }
+            history.push({ role: 'user', content: text, timestamp: Date.now() });
+            history.push({ role: 'ig', content: replyText, timestamp: Date.now(), model, modelName: respondingModelName });
+            fs.writeFileSync(p, JSON.stringify(history, null, 2));
+            return { text: replyText, modelName: respondingModelName };
+        } catch (error) {
+            return { text: `Erro interno: ${error.message}`, modelName: 'Sistema' };
+        }
+    });
+
+    // ── USB Screen Capture ──
+    let usbCaptureProcess = null;
     ipcMain.handle('system.startUSBCapture', () => new Promise((resolve) => {
         if (usbCaptureProcess) { usbCaptureProcess.kill(); usbCaptureProcess = null; }
-
         const scriptPath = isPackaged
             ? path.join(process.resourcesPath, 'engine', 'usb_capture.py')
             : path.join(__dirname, 'engine', 'usb_capture.py');
-
         const tmpFile = path.join(os.tmpdir(), 'inject_ig_screen.png');
-
         const pythonBin = findPythonBinary();
-        usbCaptureProcess = spawn(pythonBin, [scriptPath], {
-            env: { ...process.env, PATH: ENV_PATH },
-            windowsHide: true
-        });
-
+        usbCaptureProcess = spawn(pythonBin, [scriptPath], { env: { ...process.env, PATH: ENV_PATH }, windowsHide: true });
         let resolved = false;
         usbCaptureProcess.stdout.on('data', (data) => {
             for (const line of data.toString().split('\n')) {
@@ -549,7 +565,57 @@ function createMainWindow() {
         if (usbCaptureProcess) { usbCaptureProcess.kill(); usbCaptureProcess = null; }
         return { success: true };
     });
+
+    // ── Estúdio PDF & Docs ──
+    ipcMain.handle('file.convert', async (event, filePath, targetFormat) => {
+        return new Promise((resolve) => {
+            if (!filePath) {
+                return resolve({ success: false, message: 'Caminho de arquivo inválido.' });
+            }
+            const ext = path.extname(filePath);
+            const base = path.basename(filePath, ext);
+            const dir = path.dirname(filePath);
+            
+            let action = '';
+            let extOut = '';
+            
+            if (targetFormat === 'docs-to-pdf') {
+                action = 'docs2pdf';
+                extOut = '.pdf';
+            } else if (targetFormat === 'img-to-pdf') {
+                action = 'img2pdf';
+                extOut = '.pdf';
+            } else if (targetFormat === 'pdf-to-docx') {
+                action = 'pdf2docx';
+                extOut = '.docx';
+            } else if (targetFormat === 'pdf-to-txt') {
+                action = 'pdf2txt';
+                extOut = '.txt';
+            } else {
+                return resolve({ success: false, message: 'Ação desconhecida.' });
+            }
+            
+            const outPath = path.join(dir, base + extOut);
+            const scriptPath = isPackaged 
+                ? path.join(process.resourcesPath, 'engine', 'pdf_studio.py') 
+                : path.join(__dirname, 'engine', 'pdf_studio.py');
+                
+            const pyBin = findPythonBinary();
+            const child = exec(`"${pyBin}" "${scriptPath}" ${action} "${filePath}" "${outPath}"`, { env: { ...process.env, PATH: ENV_PATH } });
+            
+            child.on('close', (code) => {
+                if (code === 0 && fs.existsSync(outPath)) {
+                    resolve({ success: true, outputPath: outPath });
+                } else {
+                    resolve({ success: false, message: `Falha na conversão via Python (Exit: ${code}).` });
+                }
+            });
+        });
+    });
 }
+
+
+
 
 // ═════ AUTO UPDATER ═════
 autoUpdater.logger = log;
@@ -694,21 +760,41 @@ function startBackend(callback) {
 
 // ═════ LAUNCH SEQUENCE ═════
 async function launch() {
-    // 1. Show splash
+    // 1. Abre a splash (única janela visível durante o carregamento)
     createSplashWindow();
-    
-    // 2. Prepare main window (load in background)
+
+    // 2. Carrega a janela principal em segundo plano (escondida)
     createMainWindow();
 
     setupAutoUpdater();
 
-    // Step 0 - Conectar ao Banco de Dados (PostgreSQL local)
-    sendSplashProgress(0, 10, 'Conectando ao banco de dados...');
-    await db.connect({ user: 'postgres', password: '5127805124' });
+    // Step 1 — Conectar ao Supabase (com timeout de 5s para não travar)
+    sendSplashProgress(0, 20, 'Conectando ao banco de dados...');
+    try {
+        await Promise.race([
+            db.connect(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+        ]);
+        sendSplashProgress(1, 50, 'Banco de dados conectado!');
+    } catch (e) {
+        console.warn('Supabase lento ou offline, continuando sem banco:', e.message);
+        sendSplashProgress(1, 50, 'Modo offline — continuando...');
+    }
 
+    // Step 2 — Aguarda a janela principal terminar de carregar
+    sendSplashProgress(2, 80, 'Carregando interface...');
+    await new Promise((resolve) => {
+        if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.isLoading()) {
+            mainWindow.webContents.once('did-finish-load', resolve);
+        } else {
+            resolve();
+        }
+    });
+
+    // Step 3 — Tudo pronto! Troca splash → janela principal
     sendSplashProgress(3, 100, 'Sistema pronto!');
+    await new Promise(r => setTimeout(r, 400)); // Pequena pausa visual
 
-    // Show main window and close splash immediately
     if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.show();
         mainWindow.focus();
@@ -726,7 +812,10 @@ async function launch() {
 }
 
 // ═════ APP LIFECYCLE ═════
-app.whenReady().then(launch);
+app.whenReady().then(() => {
+    setupIpcHandlers(); // Registra handlers UMA VEZ antes de tudo
+    launch();
+});
 
 app.on('window-all-closed', () => {
     // Kill backend when app closes

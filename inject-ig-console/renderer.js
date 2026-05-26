@@ -123,6 +123,9 @@ segBtns.forEach(btn => {
         if (targetId === 'view-settings') {
             if (typeof loadLicenseSettings === 'function') loadLicenseSettings();
         }
+        if (targetId === 'view-agent-ig') {
+            if (typeof loadAgentIgHistory === 'function') loadAgentIgHistory();
+        }
     });
 });
 
@@ -2296,3 +2299,341 @@ document.getElementById('btn-show-policies')?.addEventListener('click', () => {
 document.getElementById('btn-close-policies')?.addEventListener('click', () => {
     document.getElementById('modal-policies').style.display = 'none';
 });
+
+// ── AGENTE IG (IA) LÓGICA FRONTEND ──
+window.copyCode = (btn, escapedCode) => {
+    const code = decodeURIComponent(escapedCode);
+    navigator.clipboard.writeText(code).then(() => {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span style="color: #34c759; font-weight: 600;">Copiado!</span>
+        `;
+        btn.style.borderColor = 'rgba(52, 199, 89, 0.3)';
+        btn.style.background = 'rgba(52, 199, 89, 0.1)';
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.style.borderColor = 'rgba(0,0,0,0.1)';
+            btn.style.background = 'transparent';
+        }, 2000);
+    }).catch(err => {
+        console.error('Falha ao copiar código:', err);
+    });
+};
+
+function parseMarkdown(text) {
+    if (!text) return "";
+    
+    // Normalizar quebras de linha literais
+    let html = text.replace(/\\n/g, '\n');
+    
+    // Escapar tags HTML básicas para evitar injeção
+    html = html
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+        
+    // 1. Blocos de código: ```lang\ncode\n```
+    const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+    html = html.replace(codeBlockRegex, (match, lang, code) => {
+        const language = lang || "code";
+        const trimmedCode = code.trim();
+        const escapedCode = encodeURIComponent(trimmedCode);
+        
+        return `
+            <div class="code-container" style="background: #f5f5f7; border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; margin: 14px 0; overflow: hidden; font-family: monospace;">
+                <div class="code-header" style="background: rgba(0,0,0,0.02); padding: 8px 16px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; color: #1d1d1f;">
+                    <span style="font-size: 11px; color: #86868b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.8px;">${language}</span>
+                    <button class="copy-btn" onclick="copyCode(this, '${escapedCode}')" style="background: transparent; border: 1px solid rgba(0,0,0,0.1); color: #1d1d1f; font-size: 11px; cursor: pointer; display: flex; align-items: center; padding: 4px 10px; border-radius: 6px; transition: all 0.2s; outline: none; font-family: inherit;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copiar
+                    </button>
+                </div>
+                <pre style="margin: 0; padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; color: #24292e; max-height: 350px; background: transparent;"><code style="font-family: inherit; white-space: pre;">${trimmedCode}</code></pre>
+            </div>
+        `;
+    });
+
+    // 2. Citações (Blockquotes): > text
+    html = html.replace(/^\s*&gt;\s+(.+)$/gm, '<blockquote style="border-left: 3px solid #007aff; background: rgba(0, 122, 255, 0.05); margin: 12px 0; padding: 8px 16px; border-radius: 0 6px 6px 0; color: #48484a; font-style: italic;">$1</blockquote>');
+
+    // 3. Títulos (Headers)
+    html = html.replace(/^\s*#{6}\s+(.+)$/gm, '<h6 style="font-size: 12px; margin: 12px 0 6px 0; font-weight: 600; color: #1d1d1f;">$1</h6>');
+    html = html.replace(/^\s*#{5}\s+(.+)$/gm, '<h5 style="font-size: 13px; margin: 14px 0 8px 0; font-weight: 600; color: #1d1d1f;">$1</h5>');
+    html = html.replace(/^\s*#{4}\s+(.+)$/gm, '<h4 style="font-size: 14px; margin: 16px 0 10px 0; font-weight: 600; color: #1d1d1f;">$1</h4>');
+    html = html.replace(/^\s*#{3}\s+(.+)$/gm, '<h3 style="font-size: 15px; margin: 18px 0 10px 0; font-weight: 600; color: #1d1d1f;">$1</h3>');
+    html = html.replace(/^\s*#{2}\s+(.+)$/gm, '<h2 style="font-size: 16px; margin: 20px 0 12px 0; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 6px; color: #1d1d1f;">$1</h2>');
+    html = html.replace(/^\s*#{1}\s+(.+)$/gm, '<h1 style="font-size: 18px; margin: 22px 0 14px 0; font-weight: 700; color: #1d1d1f;">$1</h1>');
+
+    // 4. Código Inline: `code`
+    html = html.replace(/`([^`]+)`/g, '<code style="background: rgba(0,0,0,0.04); padding: 3px 6px; border-radius: 5px; font-family: monospace; font-size: 12px; color: #ff2d55; border: 1px solid rgba(0,0,0,0.02);">$1</code>');
+
+    // 5. Negrito & Itálico
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight: 600; color: #1d1d1f;">$1</strong>');
+    html = html.replace(/\*([^*]+)\*/g, '<em style="font-style: italic; color: #1d1d1f;">$1</em>');
+
+    // 6. Listas Ordenadas e Não Ordenadas
+    let inList = false;
+    let lines = html.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        const isBullet = /^\s*[-*]\s+(.+)$/.exec(line);
+        const isNumbered = /^\s*\d+\.\s+(.+)$/.exec(line);
+        
+        if (isBullet) {
+            let content = isBullet[1];
+            if (!inList) {
+                lines[i] = '<ul style="margin: 10px 0; padding-left: 20px; list-style-type: disc; color: #1d1d1f;">\n<li style="margin-bottom: 6px; line-height: 1.55;">' + content + '</li>';
+                inList = 'ul';
+            } else if (inList === 'ul') {
+                lines[i] = '<li style="margin-bottom: 6px; line-height: 1.55;">' + content + '</li>';
+            } else {
+                lines[i] = '</ol>\n<ul style="margin: 10px 0; padding-left: 20px; list-style-type: disc; color: #1d1d1f;">\n<li style="margin-bottom: 6px; line-height: 1.55;">' + content + '</li>';
+                inList = 'ul';
+            }
+        } else if (isNumbered) {
+            let content = isNumbered[1];
+            if (!inList) {
+                lines[i] = '<ol style="margin: 10px 0; padding-left: 20px; list-style-type: decimal; color: #1d1d1f;">\n<li style="margin-bottom: 6px; line-height: 1.55;">' + content + '</li>';
+                inList = 'ol';
+            } else if (inList === 'ol') {
+                lines[i] = '<li style="margin-bottom: 6px; line-height: 1.55;">' + content + '</li>';
+            } else {
+                lines[i] = '</ul>\n<ol style="margin: 10px 0; padding-left: 20px; list-style-type: decimal; color: #1d1d1f;">\n<li style="margin-bottom: 6px; line-height: 1.55;">' + content + '</li>';
+                inList = 'ol';
+            }
+        } else {
+            if (inList) {
+                lines[i] = (inList === 'ul' ? '</ul>' : '</ol>') + '\n' + line;
+                inList = false;
+            }
+        }
+    }
+    if (inList) {
+        lines.push(inList === 'ul' ? '</ul>' : '</ol>');
+    }
+    html = lines.join('\n');
+
+    // 7. Parágrafos
+    let paragraphs = html.split(/\n\n+/);
+    for (let j = 0; j < paragraphs.length; j++) {
+        let p = paragraphs[j].trim();
+        if (!p) continue;
+        if (!p.startsWith('<ul') && !p.startsWith('<ol') && !p.startsWith('<h') && !p.startsWith('<div') && !p.startsWith('<blockquote') && !p.startsWith('</ul') && !p.startsWith('</ol')) {
+            paragraphs[j] = '<p style="margin: 10px 0; line-height: 1.55; color: #1d1d1f;">' + p.replace(/\n/g, '<br>') + '</p>';
+        } else {
+            paragraphs[j] = p.replace(/\n/g, ' ');
+        }
+    }
+    html = paragraphs.join('\n');
+
+    return html;
+}
+
+function renderChatMessage(role, content, modelName = 'Agente IG') {
+    const chatContainer = document.getElementById('ig-chat-messages');
+    if (!chatContainer) return;
+
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    div.style.flexDirection = 'column';
+    
+    if (role === 'user') {
+        div.style.maxWidth = '80%';
+        div.style.alignSelf = 'flex-end';
+        div.innerHTML = `
+            <div style="background: #007aff; color: #fff; padding: 12px 16px; border-radius: 18px 18px 0 18px; font-size: 14px; line-height: 1.4; box-shadow: 0 2px 8px rgba(0,122,255,0.15);">
+                ${content.replace(/\\n/g, '<br>')}
+            </div>
+            <div style="font-size: 10px; color: #86868b; text-align: right; margin-top: 4px; padding-right: 4px;">Você</div>
+        `;
+    } else {
+        div.style.maxWidth = '90%';
+        div.style.width = '100%';
+        div.style.alignSelf = 'flex-start';
+        div.innerHTML = `
+            <div style="background: #ffffff; border: 1px solid rgba(0,0,0,0.08); color: #1d1d1f; padding: 14px 18px; border-radius: 18px 18px 18px 0; font-size: 14px; line-height: 1.6; box-shadow: 0 2px 10px rgba(0,0,0,0.04); width: 100%;">
+                ${parseMarkdown(content)}
+            </div>
+            <div style="font-size: 10px; color: #86868b; margin-top: 6px; padding-left: 6px; display: flex; align-items: center; gap: 4px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2a2 2 0 0 1-2-2c0-1.1.9-2 2-2z"/><path d="M10 21.5c-1.3-.8-2.5-2.2-3.1-4.2-.6-2.1-.5-4.4.5-6.2 1-1.7 2.6-2.8 4.6-3 2-.2 4 .5 5.5 1.8 1.5 1.3 2.5 3.3 2.5 5.5 0 2.2-1.1 4.3-2.9 5.4"/><path d="M8.5 17c-1.5.8-3.4.6-4.7-.6-1.3-1.1-1.8-3-.9-4.6"/><path d="M15.5 17c1.5.8 3.4.6 4.7-.6 1.3-1.1 1.8-3 .9-4.6"/></svg>
+                ${modelName}
+            </div>
+        `;
+    }
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+let agentIgHistoryLoaded = false;
+async function loadAgentIgHistory() {
+    if (agentIgHistoryLoaded || !window.electronAPI) return;
+    try {
+        const history = await window.electronAPI.getChatHistory();
+        const chatContainer = document.getElementById('ig-chat-messages');
+        if (chatContainer) chatContainer.innerHTML = '';
+        
+        if (history.length === 0) {
+            renderChatMessage('ig', 'Olá! Sou o IG, seu Agente de IA. Estou conectado às melhores IAs de código aberto do mundo.\n\nPara começar, escolha o modelo lá no topo e digite sua pergunta.', 'Sistema IG');
+        } else {
+            history.forEach(msg => {
+                renderChatMessage(msg.role, msg.content, msg.modelName || 'Agente IG');
+            });
+        }
+        agentIgHistoryLoaded = true;
+    } catch (e) {
+        console.error('Erro ao carregar histórico do agente:', e);
+    }
+}
+
+document.getElementById('ig-chat-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('ig-chat-input');
+    const modelSelect = document.getElementById('agent-ig-model-select');
+    if (!input || !modelSelect || !window.electronAPI) return;
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    renderChatMessage('user', text);
+
+    // Loader temporário
+    const chatContainer = document.getElementById('ig-chat-messages');
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'ig-chat-loading';
+    loadingDiv.style.alignSelf = 'flex-start';
+    loadingDiv.style.width = '100%';
+    loadingDiv.innerHTML = `
+        <div style="background: #ffffff; border: 1px solid rgba(0,0,0,0.08); padding: 12px 16px; border-radius: 18px 18px 18px 0; font-size: 14px; color: #86868b; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); max-width: 140px;">
+            <div class="loader" style="width: 14px; height: 14px; border: 2px solid rgba(0, 122, 255, 0.2); border-top-color: #007aff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            Pensando...
+        </div>
+    `;
+    chatContainer.appendChild(loadingDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    try {
+        const reply = await window.electronAPI.sendChatMessage(text, modelSelect.value);
+        if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
+        
+        if (typeof reply === 'object' && reply !== null) {
+            renderChatMessage('ig', reply.text, reply.modelName);
+        } else {
+            renderChatMessage('ig', reply, 'Agente IG');
+        }
+    } catch (err) {
+        if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
+        renderChatMessage('ig', '⚠️ Erro ao comunicar com a IA.', 'Sistema');
+    }
+});
+
+// ═════ ESTÚDIO PDF & DOCS ═════
+const pdfDropzone = document.getElementById('pdf-dropzone');
+const pdfFileInput = document.getElementById('pdf-file-input');
+const pdfDropContent = document.getElementById('pdf-drop-content');
+const pdfActionsPanel = document.getElementById('pdf-actions-panel');
+const pdfSelectedFilename = document.getElementById('pdf-selected-filename');
+const pdfSelectedFilesize = document.getElementById('pdf-selected-filesize');
+const pdfConversionOptions = document.getElementById('pdf-conversion-options');
+const pdfLoadingPanel = document.getElementById('pdf-loading-panel');
+const pdfLoadingText = document.getElementById('pdf-loading-text');
+
+let currentPdfFile = null;
+
+if (pdfDropzone) {
+    // Drag events
+    pdfDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        pdfDropzone.style.borderColor = '#3b82f6';
+        pdfDropzone.style.background = 'rgba(59, 130, 246, 0.1)';
+    });
+    
+    pdfDropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        pdfDropzone.style.borderColor = 'rgba(255,255,255,0.2)';
+        pdfDropzone.style.background = 'rgba(255,255,255,0.02)';
+    });
+    
+    pdfDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        pdfDropzone.style.borderColor = 'rgba(255,255,255,0.2)';
+        pdfDropzone.style.background = 'rgba(255,255,255,0.02)';
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handlePDFFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    pdfFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handlePDFFile(e.target.files[0]);
+        }
+    });
+}
+
+function resetPDFStudio() {
+    currentPdfFile = null;
+    pdfFileInput.value = '';
+    pdfDropContent.style.display = 'block';
+    pdfActionsPanel.style.display = 'none';
+    pdfLoadingPanel.style.display = 'none';
+}
+
+function handlePDFFile(file) {
+    currentPdfFile = file;
+    pdfSelectedFilename.textContent = file.name;
+    pdfSelectedFilesize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+    
+    pdfDropContent.style.display = 'none';
+    pdfActionsPanel.style.display = 'flex';
+    
+    // Configurar opções baseadas na extensão
+    const ext = file.name.split('.').pop().toLowerCase();
+    pdfConversionOptions.innerHTML = ''; // Clear old buttons
+
+    const addOption = (label, actionTarget) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.style.background = 'rgba(59, 130, 246, 0.2)';
+        btn.style.color = '#fff';
+        btn.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+        btn.textContent = label;
+        btn.onclick = () => doPDFConversion(file, actionTarget);
+        pdfConversionOptions.appendChild(btn);
+    };
+
+    if (ext === 'pdf') {
+        addOption('Converter para Word (.docx)', 'pdf-to-docx');
+        addOption('Converter para Texto (.txt)', 'pdf-to-txt');
+    } else if (['doc', 'docx', 'rtf', 'txt'].includes(ext)) {
+        addOption('Converter para PDF (.pdf)', 'docs-to-pdf');
+    } else if (['jpg', 'jpeg', 'png'].includes(ext)) {
+        addOption('Converter para PDF (.pdf)', 'img-to-pdf');
+    } else {
+        pdfConversionOptions.innerHTML = '<p style="color: #ef4444; grid-column: span 2;">Formato não suportado para conversão nativa.</p>';
+    }
+}
+
+async function doPDFConversion(file, targetFormat) {
+    pdfLoadingPanel.style.display = 'flex';
+    if (targetFormat === 'pdf-to-docx') pdfLoadingText.textContent = 'Convertendo PDF para Word...';
+    if (targetFormat === 'pdf-to-txt') pdfLoadingText.textContent = 'Extraindo texto do PDF...';
+    if (targetFormat === 'docs-to-pdf') pdfLoadingText.textContent = 'Gerando PDF nativo...';
+    if (targetFormat === 'img-to-pdf') pdfLoadingText.textContent = 'Transformando Imagem em PDF...';
+
+    try {
+        const result = await electronAPI.convertFile(file, targetFormat);
+        pdfLoadingPanel.style.display = 'none';
+        
+        if (result.success) {
+            alert('Conversão concluída com sucesso!\nSalvo em: ' + result.outputPath);
+            resetPDFStudio();
+        } else {
+            alert('Erro na conversão: ' + result.message);
+            pdfLoadingPanel.style.display = 'none';
+        }
+    } catch (e) {
+        alert('Erro fatal: ' + e.message);
+        pdfLoadingPanel.style.display = 'none';
+    }
+}
