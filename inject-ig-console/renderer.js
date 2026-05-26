@@ -2160,3 +2160,90 @@ if (window.electronAPI && window.electronAPI.onUpdateStatus) {
     });
 }
 
+// ── License Settings & Policies ──
+async function loadLicenseSettings() {
+    if (!window.electronAPI || !currentHWID) return;
+    try {
+        const license = await window.electronAPI.getLicenseInfo(currentHWID);
+        if (license) {
+            const badge = document.getElementById('license-status-badge');
+            const daysLeft = document.getElementById('license-days-left');
+            const serialKey = document.getElementById('license-serial-key');
+            const progress = document.getElementById('license-progress-bar');
+            const alertMsg = document.getElementById('license-alert');
+
+            if (serialKey) serialKey.innerText = license.key || '----';
+
+            if (!license.is_active) {
+                if (badge) {
+                    badge.style.background = 'rgba(239, 68, 68, 0.15)';
+                    badge.style.color = 'var(--red)';
+                    badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                    badge.innerHTML = '<span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span> Inativa / Suspensa';
+                }
+                if (daysLeft) daysLeft.innerText = '0 dias';
+                if (progress) {
+                    progress.style.width = '0%';
+                    progress.style.background = 'var(--red)';
+                }
+                return;
+            }
+
+            if (license.expires_at) {
+                const now = new Date();
+                const expires = new Date(license.expires_at);
+                const activated = new Date(license.activated_at || license.created_at);
+                
+                const diffTime = Math.max(0, expires - now);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (daysLeft) daysLeft.innerText = `${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
+
+                const totalTime = Math.max(1, expires - activated);
+                const percentLeft = Math.max(0, Math.min(100, (diffTime / totalTime) * 100));
+                
+                if (progress) progress.style.width = `${percentLeft}%`;
+
+                if (diffDays <= 3) {
+                    if (progress) progress.style.background = 'var(--amber)';
+                    if (badge) {
+                        badge.style.background = 'rgba(245, 158, 11, 0.15)';
+                        badge.style.color = 'var(--amber)';
+                        badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                    }
+                    if (alertMsg) alertMsg.style.display = 'block';
+                    if (diffDays === 0) {
+                        if (progress) progress.style.background = 'var(--red)';
+                        if (daysLeft) daysLeft.innerText = 'Expira hoje';
+                    }
+                } else {
+                    if (progress) progress.style.background = 'var(--green)';
+                    if (alertMsg) alertMsg.style.display = 'none';
+                    if (badge) {
+                        badge.style.background = 'rgba(52,211,153,0.15)';
+                        badge.style.color = 'var(--green)';
+                        badge.style.borderColor = 'rgba(52,211,153,0.3)';
+                        badge.innerHTML = '<span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span> Ativo';
+                    }
+                }
+            } else {
+                if (daysLeft) daysLeft.innerText = 'Vitalício';
+                if (progress) {
+                    progress.style.width = '100%';
+                    progress.style.background = 'var(--accent)';
+                }
+                if (alertMsg) alertMsg.style.display = 'none';
+            }
+        }
+    } catch (e) {
+        console.error('Erro ao carregar configurações de licença:', e);
+    }
+}
+
+document.getElementById('btn-show-policies')?.addEventListener('click', () => {
+    document.getElementById('modal-policies').style.display = 'flex';
+});
+
+document.getElementById('btn-close-policies')?.addEventListener('click', () => {
+    document.getElementById('modal-policies').style.display = 'none';
+});
