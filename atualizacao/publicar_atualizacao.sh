@@ -38,16 +38,33 @@ hdiutil info | grep "/Volumes/inject-ig" | awk '{print $1}' | xargs -I {} hdiuti
 
 # 5. Configura as variáveis de envio
 # O segredo mágico: EP_DRAFT="false" força o sistema a publicar oficialmente ao invés de salvar como Rascunho!
-PART1="ghp_elVnxDIswKD"
-PART2="P88Qu1rHqxkSUc3TrwG48MiD4"
-export GH_TOKEN="${PART1}${PART2}"
+if [ -z "$GH_TOKEN" ]; then
+    echo -e "${CYAN}⚠️ Atenção: A variável GH_TOKEN não está definida. Certifique-se de exportá-la antes de rodar o script ou configurar no seu ambiente.${NC}"
+    exit 1
+fi
 export EP_DRAFT="false"
 
 # 6. Compila e publica as 3 versões!
-echo -e "\n${GREEN}[4/5] 🌐 Compilando e enviando para os servidores (Mac, Windows e Linux)...${NC}"
+echo -e "\n${GREEN}[4/5] 🌐 Compilando e enviando para os servidores (Mac, Windows e Linux separadamente para economizar espaço)...${NC}"
 echo "Isso pode levar alguns minutos. Vá pegar um café! ☕"
 
-npx electron-builder --mac --win --linux -p always
+# Build Mac
+echo -e "\n${CYAN}>>> Compilando versão Mac...${NC}"
+npx electron-builder --mac -p always
+rm -rf ../dist.nosync/mac  # Limpa o cache desempacotado do mac
+rm -f ../dist.nosync/*.dmg ../dist.nosync/*.zip ../dist.nosync/*.blockmap
+
+# Build Windows
+echo -e "\n${CYAN}>>> Compilando versão Windows...${NC}"
+npx electron-builder --win -p always
+rm -rf ../dist.nosync/win-unpacked  # Limpa o cache desempacotado do windows
+rm -f ../dist.nosync/*.exe ../dist.nosync/*.blockmap
+
+# Build Linux
+echo -e "\n${CYAN}>>> Compilando versão Linux...${NC}"
+npx electron-builder --linux -p always
+rm -rf ../dist.nosync/linux-unpacked || true
+rm -f ../dist.nosync/*.AppImage ../dist.nosync/*.deb
 
 echo -e "\n${GREEN}[5/5] ✅ DEPLOY CONCLUÍDO COM SUCESSO!${NC}"
 echo "A versão $NEW_VERSION está no ar e todos os computadores infectados/clientes vão baixá-la agora mesmo!"

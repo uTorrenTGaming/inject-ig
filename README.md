@@ -6,12 +6,17 @@ Todo o motor legado em Java e as lógicas em console solto foram DELETADAS e mig
 
 ## 🌟 Arquitetura Central (PostgreSQL)
 
-O banco de dados é a alma do sistema. Você precisa ter o serviço rodando localmente (ou na nuvem).
-Configuração padrão no `main.js`:
-- User: `postgres`
-- Password: ``
+O banco de dados é a alma do sistema. Você precisa ter um projeto Supabase configurado e rodando.
 
-As autenticações ocorrem de forma passiva: O Electron detecta o hash do seu Hardware (macOS, Windows ou Linux) usando `node-machine-id` e valida se o seu `is_banned` é verdadeiro. Se estiver banido, uma tela vermelha intrusiva bloqueará a interface e os comandos de navegação.
+### Configuração do Banco (Supabase)
+As credenciais e URLs de acesso não devem ser expostas. O sistema utiliza um arquivo `.env` para carregar as informações do banco de dados com segurança.
+Crie um arquivo `.env` na pasta `inject-ig-console` baseado no modelo `.env.example`:
+```
+SUPABASE_URL="https://seu-projeto.supabase.co"
+SUPABASE_KEY="sua_chave_secreta_aqui"
+```
+
+As autenticações ocorrem de forma passiva: O Electron detecta o hash do seu Hardware (macOS, Windows ou Linux) usando `node-machine-id` e valida a licença e status (banimento) em tempo real contra o Supabase. Se estiver banido, uma tela vermelha intrusiva bloqueará a interface e os comandos de navegação.
 
 ## 🛠 Como iniciar em modo Dev
 

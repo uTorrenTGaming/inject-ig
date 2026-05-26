@@ -6,5 +6,11 @@ contextBridge.exposeInMainWorld('adminAPI', {
     
     closeWindow: () => ipcRenderer.send('window.close'),
     minimizeWindow: () => ipcRenderer.send('window.minimize'),
-    maximizeWindow: () => ipcRenderer.send('window.maximize')
+    maximizeWindow: () => ipcRenderer.send('window.maximize'),
+    
+    // API de Licenças (DRM)
+    getLicenses: () => ipcRenderer.invoke('admin.getLicenses'),
+    generateLicense: (durationDays) => ipcRenderer.invoke('admin.generateLicense', durationDays),
+    revokeLicense: (id) => ipcRenderer.invoke('admin.revokeLicense', id),
+    deleteLicense: (id) => ipcRenderer.invoke('admin.deleteLicense', id)
 });

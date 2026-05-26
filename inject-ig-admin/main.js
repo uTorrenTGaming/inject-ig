@@ -74,6 +74,70 @@ ipcMain.handle('admin.banUser', async (event, hwid, type) => {
     }
 });
 
+// ── LICENSES IPC ──
+ipcMain.handle('admin.getLicenses', async () => {
+    const { data, error } = await supabase
+        .from('licenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+});
+
+ipcMain.handle('admin.generateLicense', async (event, durationDays) => {
+    try {
+        const key = 'IG-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
+                    Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
+                    Math.random().toString(36).substring(2, 6).toUpperCase();
+        
+        const { error } = await supabase
+            .from('licenses')
+            .insert([{ 
+                key: key, 
+                is_active: true, 
+                duration_days: durationDays || null 
+            }]);
+
+        if (error) throw error;
+        return { success: true, key };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
+});
+
+ipcMain.handle('admin.revokeLicense', async (event, id) => {
+    try {
+        // Find current status to toggle
+        const { data: license } = await supabase.from('licenses').select('is_active').eq('id', id).single();
+        if (!license) throw new Error('Licença não encontrada');
+
+        const { error } = await supabase
+            .from('licenses')
+            .update({ is_active: !license.is_active })
+            .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
+});
+
+ipcMain.handle('admin.deleteLicense', async (event, id) => {
+    try {
+        const { error } = await supabase
+            .from('licenses')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
+});
+
 ipcMain.on('window.close', () => app.quit());
 ipcMain.on('window.minimize', () => mainWindow.minimize());
 ipcMain.on('window.maximize', () => {

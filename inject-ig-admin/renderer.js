@@ -66,3 +66,95 @@ async function banUser(hwid, type) {
 // Inicializa a lista e atualiza automaticamente a cada 5 segundos
 loadUsers();
 setInterval(loadUsers, 5000);
+
+// ── Licenças DRM ──
+const licenseTbody = document.getElementById('license-table-body');
+
+async function loadLicenses() {
+    if (!document.getElementById('view-licenses').classList.contains('active')) return;
+    
+    try {
+        const licenses = await window.adminAPI.getLicenses();
+        if (!licenseTbody) return;
+        licenseTbody.innerHTML = '';
+        
+        licenses.forEach(lic => {
+            let statusHtml = '';
+            
+            if (!lic.is_active) {
+                statusHtml = '<span class="status banned">Suspensa</span>';
+            } else if (!lic.hwid_vinculado) {
+                statusHtml = '<span class="status active" style="color:var(--text-1); background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2);">Livre</span>';
+            } else {
+                let isExpired = false;
+                if (lic.expires_at) {
+                    const exp = new Date(lic.expires_at);
+                    if (new Date() > exp) isExpired = true;
+                }
+                
+                if (isExpired) {
+                    statusHtml = '<span class="status banned">Expirada</span>';
+                } else {
+                    statusHtml = '<span class="status active">Em Uso</span>';
+                    if (lic.expires_at) {
+                        statusHtml += `<br><small style="color:var(--text-2); font-size:10px;">Até ${new Date(lic.expires_at).toLocaleDateString()}</small>`;
+                    }
+                }
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span class="hwid-tag" style="user-select:all; cursor:copy;">${lic.key}</span></td>
+                <td>
+                    ${lic.hwid_vinculado ? `<span class="hwid-tag">${lic.hwid_vinculado}</span>` : '<span style="color:var(--text-2); font-style:italic;">Aguardando ativação...</span>'}
+                </td>
+                <td>
+                    <span style="font-weight:600; font-size:12px;">${lic.duration_days ? lic.duration_days + ' Dias' : 'Permanente'}</span>
+                </td>
+                <td>${statusHtml}</td>
+                <td>
+                    <div class="actions">
+                        <button class="${lic.is_active ? 'btn-temp' : 'btn-unban'}" onclick="revokeLicense(${lic.id})">${lic.is_active ? 'Suspender' : 'Restaurar'}</button>
+                        <button class="btn-perm" onclick="deleteLicense(${lic.id})">Excluir</button>
+                    </div>
+                </td>
+            `;
+            licenseTbody.appendChild(tr);
+        });
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+async function generateLicense(days) {
+    const res = await window.adminAPI.generateLicense(days);
+    if (res.success) {
+        loadLicenses();
+        // Opcional: copiar automaticamente a chave gerada para a área de transferência
+        navigator.clipboard.writeText(res.key).catch(e => {});
+    } else {
+        alert("Erro ao gerar licença: " + res.message);
+    }
+}
+
+async function revokeLicense(id) {
+    const res = await window.adminAPI.revokeLicense(id);
+    if (res.success) {
+        loadLicenses();
+    } else {
+        alert("Erro: " + res.message);
+    }
+}
+
+async function deleteLicense(id) {
+    if(!confirm("Tem certeza que deseja apagar esta chave permanentemente? O cliente perderá acesso na hora.")) return;
+    const res = await window.adminAPI.deleteLicense(id);
+    if (res.success) {
+        loadLicenses();
+    } else {
+        alert("Erro: " + res.message);
+    }
+}
+
+// Loop de atualização das licenças a cada 5 segundos
+setInterval(loadLicenses, 5000);
