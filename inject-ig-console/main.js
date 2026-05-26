@@ -585,7 +585,8 @@ function setupAutoUpdater() {
     });
     
     ipcMain.on('update.install', () => {
-        autoUpdater.quitAndInstall();
+        app.isQuiting = true;
+        autoUpdater.quitAndInstall(false, true);
     });
 }
 
@@ -733,7 +734,7 @@ app.on('window-all-closed', () => {
         try { backendProcess.kill(); } catch (e) {}
         backendProcess = null;
     }
-    if (process.platform !== 'darwin') app.quit();
+    if (process.platform !== 'darwin' || app.isQuiting) app.quit();
 });
 
 app.on('activate', () => {

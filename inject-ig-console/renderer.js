@@ -2192,16 +2192,22 @@ if (window.electronAPI && window.electronAPI.onUpdateStatus) {
 
 // ── License Settings & Policies ──
 async function loadLicenseSettings() {
-    if (!window.electronAPI || !currentHWID) return;
+    if (!window.electronAPI) return;
     try {
-        const license = await window.electronAPI.getLicenseInfo(currentHWID);
-        if (license) {
-            const badge = document.getElementById('license-status-badge');
-            const daysLeft = document.getElementById('license-days-left');
-            const serialKey = document.getElementById('license-serial-key');
-            const progress = document.getElementById('license-progress-bar');
-            const alertMsg = document.getElementById('license-alert');
+        let hwid = currentHWID;
+        if (!hwid) {
+            hwid = await window.electronAPI.getHWID();
+            currentHWID = hwid;
+        }
+        
+        const license = await window.electronAPI.getLicenseInfo(hwid);
+        const badge = document.getElementById('license-status-badge');
+        const daysLeft = document.getElementById('license-days-left');
+        const serialKey = document.getElementById('license-serial-key');
+        const progress = document.getElementById('license-progress-bar');
+        const alertMsg = document.getElementById('license-alert');
 
+        if (license) {
             if (serialKey) serialKey.innerText = license.key || '----';
 
             if (!license.is_active) {
@@ -2263,6 +2269,19 @@ async function loadLicenseSettings() {
                     progress.style.background = 'var(--accent)';
                 }
                 if (alertMsg) alertMsg.style.display = 'none';
+            }
+        } else {
+            if (serialKey) serialKey.innerText = 'Não Encontrada';
+            if (badge) {
+                badge.style.background = 'rgba(239, 68, 68, 0.15)';
+                badge.style.color = 'var(--red)';
+                badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                badge.innerHTML = '<span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span> Inválida / Ausente';
+            }
+            if (daysLeft) daysLeft.innerText = '--';
+            if (progress) {
+                progress.style.width = '0%';
+                progress.style.background = 'var(--red)';
             }
         }
     } catch (e) {
