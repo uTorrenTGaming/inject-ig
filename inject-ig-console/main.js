@@ -275,6 +275,14 @@ function createMainWindow() {
         }
     });
 
+    ipcMain.handle('auth.getLicenseInfo', async (event, hwid) => {
+        try {
+            return await db.getLicenseInfo(hwid);
+        } catch (e) {
+            return null;
+        }
+    });
+
     ipcMain.handle('auth.checkBanStatus', async (event, hwid) => {
         try {
             return await db.checkBanStatus(hwid);

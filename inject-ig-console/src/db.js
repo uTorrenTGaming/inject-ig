@@ -161,6 +161,24 @@ class DatabaseManager {
     }
   }
 
+  async getLicenseInfo(hwid) {
+    try {
+      const { data, error } = await this.client
+        .from('licenses')
+        .select('*')
+        .eq('hwid_vinculado', hwid)
+        .eq('is_active', true)
+        .single();
+
+      if (!data) return null;
+      return data;
+    } catch (error) {
+      if (error.code === 'PGRST116') return null;
+      console.error('Erro ao buscar detalhes da licença:', error);
+      return null;
+    }
+  }
+
   async activateLicense(key, hwid) {
     try {
       // 1. Busca a licença pela chave

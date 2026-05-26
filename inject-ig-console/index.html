@@ -982,6 +982,60 @@
 
         <!-- ═══ Settings ═══ -->
         <div id="view-settings" class="view">
+            <!-- ═══ ASSINATURA E LICENÇA ═══ -->
+            <div class="card" style="margin-bottom: 12px; position: relative; overflow: hidden;" id="license-info-card">
+                <div class="card-label">Sua Assinatura</div>
+                <div class="card-title">Detalhes da Licença (DRM)</div>
+                <div class="card-desc">Gerencie o seu plano de acesso ao motor.</div>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                    <!-- Status / Dias Restantes -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-2); margin-bottom: 4px;">Status da Licença</div>
+                            <div id="license-status-badge" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(52,211,153,0.15); color: var(--green); border: 1px solid rgba(52,211,153,0.3);">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
+                                Ativo
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 11px; color: var(--text-2); margin-bottom: 2px;">Tempo Restante</div>
+                            <div id="license-days-left" style="font-size: 20px; font-weight: 700; font-family: var(--mono); color: var(--text-1);">-- dias</div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-top: 5px;">
+                        <div id="license-progress-bar" style="height: 100%; width: 100%; background: var(--green); transition: width 0.5s var(--ease), background 0.3s ease;"></div>
+                    </div>
+
+                    <div id="license-alert" style="display: none; color: var(--red); font-size: 11px; font-weight: 600; margin-top: 5px; animation: pulse-opacity 1.5s infinite;">
+                        ⚠️ Atenção: Sua licença expira em breve. Contate o administrador para renovar.
+                    </div>
+
+                    <!-- Chave de Acesso -->
+                    <div style="margin-top: 10px;">
+                        <div style="font-size: 11px; color: var(--text-2); margin-bottom: 4px;">Chave Vinculada (Serial)</div>
+                        <div id="license-serial-key" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px; border-radius: 6px; font-family: var(--mono); font-size: 11px; color: var(--text-3); word-break: break-all; user-select: all; cursor: copy;">
+                            ----
+                        </div>
+                    </div>
+
+                    <!-- Políticas (Accordion) -->
+                    <details class="tut-details" style="margin-top: 10px;">
+                        <summary class="tut-summary">Políticas e Termos de Uso</summary>
+                        <div class="tut-content">
+                            <p>Esta licença é estritamente pessoal e intransferível.</p>
+                            <ul style="margin-top: 8px; padding-left: 14px;">
+                                <li><b>Vinculação de Hardware (HWID):</b> Sua chave foi automaticamente vinculada a esta máquina. Tentativas de uso em outro computador resultarão em bloqueio.</li>
+                                <li><b>Expiração de Tempo:</b> O acesso é revogado automaticamente no minuto exato do vencimento, sem possibilidade de recuperação de sessões em andamento.</li>
+                                <li><b>Suspensão:</b> O administrador pode revogar chaves a qualquer momento por violação de diretrizes.</li>
+                            </ul>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
             <div class="card" style="margin-bottom: 12px;">
                 <div class="card-label">Sua Conta</div>
                 <div class="card-title">Perfil e Avatar</div>

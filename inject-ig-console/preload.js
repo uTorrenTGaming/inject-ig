@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     authLoginOrRegister: (hwid, username, avatar_url) => ipcRenderer.invoke('auth.loginOrRegister', hwid, username, avatar_url),
     checkBanStatus: (hwid) => ipcRenderer.invoke('auth.checkBanStatus', hwid),
     activateLicense: (key, hwid) => ipcRenderer.invoke('system.activateLicense', key, hwid),
+    getLicenseInfo: (hwid) => ipcRenderer.invoke('auth.getLicenseInfo', hwid),
     
     // Auto Updater
     checkUpdate: () => ipcRenderer.send('update.check'),

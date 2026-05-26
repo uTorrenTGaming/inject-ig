@@ -120,6 +120,9 @@ segBtns.forEach(btn => {
         if (targetId === 'view-terminal') setTimeout(() => fitAddon.fit(), 10);
         if (targetId === 'view-tools') renderTools();
         if (targetId === 'view-exploits') renderExploits();
+        if (targetId === 'view-settings') {
+            if (typeof loadLicenseSettings === 'function') loadLicenseSettings();
+        }
     });
 });
 
