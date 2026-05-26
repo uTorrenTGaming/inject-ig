@@ -1,6 +1,6 @@
 {
   "name": "inject-ig-console",
-  "version": "2.0.18",
+  "version": "2.0.19",
   "description": "inject-ig — Sistema de Vigilância Digital",
   "main": "main.js",
   "scripts": {
