@@ -111,7 +111,10 @@ function findJavaBinary() {
     // Localização: <app>/Contents/Resources/jre/bin/java  (Mac/Linux)
     //              <install>/resources/jre/bin/java.exe   (Windows)
     if (isPackaged) {
-        const bundledJava = path.join(process.resourcesPath, 'jre', 'bin', javaBin);
+        let bundledJava = path.join(process.resourcesPath, 'jre', 'bin', javaBin);
+        if (process.platform === 'darwin') {
+            bundledJava = path.join(process.resourcesPath, 'jre', 'Contents', 'Home', 'bin', javaBin);
+        }
         if (fs.existsSync(bundledJava)) {
             log.info(`[backend] Usando JRE bundled: ${bundledJava}`);
             return bundledJava;
@@ -738,6 +741,8 @@ function setupIpcHandlers() {
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
 
+let downloadedUpdatePath = null;
+
 function setupAutoUpdater() {
     autoUpdater.on('checking-for-update', () => {
         log.info('Checking for update...');
@@ -759,7 +764,8 @@ function setupAutoUpdater() {
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update.progress', progressObj);
     });
     autoUpdater.on('update-downloaded', (info) => {
-        log.info('Update downloaded');
+        log.info('Update downloaded to: ' + info.downloadedFile);
+        downloadedUpdatePath = info.downloadedFile;
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update.ready', 'Atualização pronta para instalar.');
     });
 
@@ -769,7 +775,29 @@ function setupAutoUpdater() {
     
     ipcMain.on('update.install', () => {
         app.isQuiting = true;
-        autoUpdater.quitAndInstall(false, true);
+        
+        if (process.platform === 'darwin' && downloadedUpdatePath) {
+            // Correção MacOS: O ShipIt (atualizador nativo da Apple) bloqueia silenciosamente a instalação
+            // de atualizações se o app não tiver sido Assinado com um certificado pago de desenvolvedor.
+            // Para contornar, fazemos a extração e substituição manual usando shell nativo.
+            const { spawn } = require('child_process');
+            const path = require('path');
+            const appPath = app.getPath('exe').replace(/\.app\/Contents\/MacOS\/.*$/, '.app');
+            const appDir = path.dirname(appPath);
+            
+            // Script que espera o app fechar (sleep 2), descompacta o zip baixado por cima, e reabre.
+            const script = `
+                sleep 2
+                unzip -o -q "${downloadedUpdatePath}" -d "${appDir}"
+                open "${appPath}"
+            `;
+            
+            spawn('sh', ['-c', script], { detached: true, stdio: 'ignore' }).unref();
+            app.quit();
+        } else {
+            // Windows e Linux funcionam normalmente sem assinatura
+            autoUpdater.quitAndInstall(false, true);
+        }
     });
 }
 
