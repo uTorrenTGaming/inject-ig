@@ -14,6 +14,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     maximizeWindow: () => ipcRenderer.send('window.maximize'),
     
     // System Hardware
+    getNetworkTraffic: () => ipcRenderer.invoke('network.getTraffic'),
+    installAIEngine: () => ipcRenderer.invoke('ai.installEngine'),
+    pullAIModel: () => ipcRenderer.invoke('ai.pullModel'),
+    checkAIEngine: () => ipcRenderer.invoke('ai.checkEngine'),
+    sendAIMessage: (modelName, messages) => ipcRenderer.invoke('ai.sendMessage', modelName, messages),
     getGPUInfo: () => ipcRenderer.invoke('system.getGPUInfo'),
     
     // Novas APIs de C2 (Command & Control)

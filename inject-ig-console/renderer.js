@@ -1875,15 +1875,10 @@ function grantAccess(user) {
                     clearInterval(window.banHeartbeat);
                     window.banHeartbeat = null;
                     
-                    mainTitlebar.style.display = 'none';
-                    mainToolbar.style.display = 'none';
+                    // RIGID LOGOUT: Alerta e desloga completamente da memória (encerra websockets e tarefas)
+                    alert("⚠️ ALERTA DE SEGURANÇA ⚠️\n\nO tempo do seu Token/Licença expirou. A sua sessão está sendo encerrada e todos os módulos (incluindo varreduras e inteligência) serão bloqueados e limpos da memória.");
+                    window.location.reload();
                     
-                    document.querySelectorAll('.view').forEach(v => {
-                        v.classList.remove('active');
-                        v.style.display = 'none';
-                    });
-                    
-                    showLicenseScreen();
                     return;
                 }
             }
@@ -1895,18 +1890,18 @@ function grantAccess(user) {
 }
 
 function showBannedScreen(hwid) {
-    authView.classList.remove('active');
-    authView.style.display = 'none';
-    
-    // Hide main app wrapper completely to avoid overlap
-    const appWrapper = document.getElementById('app-wrapper');
-    if (appWrapper) {
-        appWrapper.style.display = 'none';
-    }
-    
-    bannedView.classList.add('active');
-    bannedView.style.display = 'flex';
-    bannedHwidDisplay.innerText = hwid || 'HWID_UNKNOWN';
+    // RIGID BAN: Destrói completamente todos os elementos da interface para não sobrar nada a ser "des-escondido" no DevTools
+    document.body.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0a0000; z-index: 9999999999; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+            <div style="width: 100px; height: 100px; border-radius: 50%; background: rgba(220, 38, 38, 0.2); display: flex; align-items: center; justify-content: center; margin-bottom: 25px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <div style="color: #dc2626; font-size: 64px; font-weight: 900; letter-spacing: 10px; text-shadow: 0 0 20px rgba(220, 38, 38, 0.5);">BANNED</div>
+            <div style="color: #fff; font-size: 16px; margin-top: 20px; font-family: monospace; letter-spacing: 2px;">ACESSO BLOQUEADO PERMANENTEMENTE</div>
+            <div style="color: #ff4444; font-size: 12px; margin-top: 15px; font-family: monospace;">A sua identificação de Hardware (HWID) foi suspensa pelo Administrador.</div>
+            <div style="color: rgba(255,255,255,0.3); font-size: 10px; margin-top: 30px; font-family: monospace; background: rgba(255,0,0,0.1); padding: 5px 15px; border-radius: 4px;">HWID: ${hwid || 'UNKNOWN'}</div>
+        </div>
+    `;
 }
 
 function showLicenseScreen() {

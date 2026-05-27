@@ -268,6 +268,123 @@ function setupIpcHandlers() {
         catch (e) { console.error('Error checking ban status:', e); return false; }
     });
 
+    ipcMain.handle('network.getTraffic', () => new Promise((resolve) => {
+        const { exec } = require('child_process');
+        exec('netstat -an', (err, stdout) => {
+            if (err) return resolve([]);
+            const lines = stdout.split('\n');
+            const ips = new Set();
+            lines.forEach(line => {
+                if (line.includes('ESTABLISHED')) {
+                    const matches = line.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g);
+                    if (matches && matches.length >= 2) {
+                        // O IP remoto geralmente é o último na linha antes de ESTABLISHED
+                        const foreignIp = matches[matches.length - 1];
+                        if (!foreignIp.startsWith('127.') && !foreignIp.startsWith('10.') && !foreignIp.startsWith('192.168.') && !foreignIp.startsWith('172.') && foreignIp !== '0.0.0.0') {
+                            ips.add(foreignIp);
+                        }
+                    }
+                }
+            });
+            resolve(Array.from(ips).slice(0, 50)); // Limit to 50 max so we don't blow up API limits
+        });
+    }));
+
+    // --- AI Engine Auto-Installer ---
+    let ollamaProcess = null;
+
+    ipcMain.handle('ai.installEngine', async () => {
+        return new Promise((resolve) => {
+            const { exec, spawn } = require('child_process');
+            const fs = require('fs');
+            const path = require('path');
+            
+            const userDataPath = app.getPath('userData');
+            const binFolder = path.join(userDataPath, 'ollama_bin');
+            const binPath = path.join(binFolder, 'ollama');
+
+            const startOllama = () => {
+                if (ollamaProcess) return resolve({ success: true, message: 'Já rodando' });
+                ollamaProcess = spawn(binPath, ['serve'], { detached: true, stdio: 'ignore' });
+                ollamaProcess.unref();
+                // Dá um tempo pro servidor subir
+                setTimeout(() => resolve({ success: true, message: 'Motor iniciado' }), 3000);
+            };
+
+            // Se o binário já existe, só liga ele
+            if (fs.existsSync(binPath)) {
+                return startOllama();
+            }
+
+            // Se não existe, cria a pasta e baixa
+            if (!fs.existsSync(binFolder)) fs.mkdirSync(binFolder, { recursive: true });
+
+            let cmd = '';
+            if (process.platform === 'darwin') {
+                cmd = `cd "${userDataPath}" && curl -L https://github.com/ollama/ollama/releases/latest/download/Ollama-darwin.zip -o ollama.zip && unzip -o -j ollama.zip Ollama.app/Contents/Resources/ollama -d ollama_bin && chmod +x ollama_bin/ollama && rm ollama.zip`;
+            } else if (process.platform === 'linux') {
+                cmd = `cd "${userDataPath}" && curl -L https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64 -o ollama_bin/ollama && chmod +x ollama_bin/ollama`;
+            } else {
+                return resolve({ success: false, error: 'SO não suportado para auto-instalação no momento.' });
+            }
+
+            exec(cmd, (err) => {
+                if (err) return resolve({ success: false, error: err.message });
+                startOllama();
+            });
+        });
+    });
+
+    ipcMain.handle('ai.pullModel', async () => {
+        try {
+            // Usa stream: false para bloquear até o download do modelo (phi3 = ~2.3GB) acabar.
+            // Para não dar timeout no frontend, o ideal é que o frontend chame e espere pacientemente.
+            const res = await fetch('http://127.0.0.1:11434/api/pull', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'phi3', stream: false })
+            });
+            if (res.ok) return { success: true };
+            return { success: false, error: 'Falha no download da IA.' };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
+    ipcMain.handle('ai.checkEngine', async () => {
+        try {
+            const res = await fetch('http://127.0.0.1:11434/api/tags');
+            if (res.ok) {
+                const data = await res.json();
+                return { online: true, models: data.models || [] };
+            }
+            return { online: false };
+        } catch (e) {
+            return { online: false };
+        }
+    });
+
+    ipcMain.handle('ai.sendMessage', async (event, modelName, messages) => {
+        try {
+            const res = await fetch('http://127.0.0.1:11434/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: modelName,
+                    messages: messages,
+                    stream: false
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return { success: true, message: data.message };
+            }
+            return { success: false, error: 'Ollama API Error' };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
     ipcMain.handle('system.getGPUInfo', async () => {
         try { return await app.getGPUInfo('complete'); }
         catch (e) { console.error('GPU Info Error:', e); return null; }
