@@ -1,6 +1,6 @@
 {
   "name": "inject-ig-console",
-  "version": "2.0.23",
+  "version": "2.0.24",
   "description": "inject-ig — Sistema de Vigilância Digital",
   "main": "main.js",
   "scripts": {
@@ -8,10 +8,10 @@
     "dev": "electron .",
     "download:jre": "node scripts/download-jre.js",
     "setup:full": "npm run download:jre && npm run build:all",
-    "build:mac": "electron-builder --mac --x64",
-    "build:win": "electron-builder --win --x64",
-    "build:linux": "electron-builder --linux",
-    "build:all": "electron-builder --mac --win --linux",
+    "build:mac": "npm run download:jre && electron-builder --mac --x64",
+    "build:win": "npm run download:jre && electron-builder --win --x64",
+    "build:linux": "npm run download:jre && electron-builder --linux",
+    "build:all": "npm run download:jre && electron-builder --mac --win --linux",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "postinstall": "electron-rebuild"
@@ -68,8 +68,14 @@
       "gatekeeperAssess": false,
       "entitlements": null,
       "extraResources": [
-        "backend/**/*",
-        "engine/**/*",
+        {
+          "from": "backend",
+          "to": "backend"
+        },
+        {
+          "from": "engine",
+          "to": "engine"
+        },
         {
           "from": "jre/mac",
           "to": "jre"
@@ -112,8 +118,14 @@
       ],
       "icon": "assets/icon.png",
       "extraResources": [
-        "backend/**/*",
-        "engine/**/*",
+        {
+          "from": "backend",
+          "to": "backend"
+        },
+        {
+          "from": "engine",
+          "to": "engine"
+        },
         {
           "from": "jre/win",
           "to": "jre"
@@ -136,8 +148,14 @@
       ],
       "icon": "assets/icons",
       "extraResources": [
-        "backend/**/*",
-        "engine/**/*",
+        {
+          "from": "backend",
+          "to": "backend"
+        },
+        {
+          "from": "engine",
+          "to": "engine"
+        },
         {
           "from": "jre/linux",
           "to": "jre"

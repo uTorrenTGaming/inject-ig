@@ -104,14 +104,19 @@ function extractTarGz(tarFile, outDir) {
         });
     }
     // Remove diretório temporário
-    execSync(`rm -rf "${tmpDir}"`);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
 }
 
 function extractZip(zipFile, outDir) {
     fs.mkdirSync(outDir, { recursive: true });
     const tmpDir = outDir + '__tmp';
     fs.mkdirSync(tmpDir, { recursive: true });
-    execSync(`unzip -q "${zipFile}" -d "${tmpDir}"`, { stdio: 'inherit' });
+    
+    if (process.platform === 'win32') {
+        execSync(`powershell -command "Expand-Archive -Force -Path '${zipFile}' -DestinationPath '${tmpDir}'"`, { stdio: 'inherit' });
+    } else {
+        execSync(`unzip -q "${zipFile}" -d "${tmpDir}"`, { stdio: 'inherit' });
+    }
 
     const entries = fs.readdirSync(tmpDir);
     if (entries.length === 1) {
@@ -125,7 +130,7 @@ function extractZip(zipFile, outDir) {
             fs.renameSync(path.join(tmpDir, f), path.join(outDir, f));
         });
     }
-    execSync(`rm -rf "${tmpDir}"`);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
 }
 
 async function main() {
@@ -153,7 +158,7 @@ async function main() {
             await download(plat.url, tmpFile);
 
             console.log(`   Extraindo para ${plat.outDir}...`);
-            if (fs.existsSync(plat.outDir)) execSync(`rm -rf "${plat.outDir}"`);
+            if (fs.existsSync(plat.outDir)) fs.rmSync(plat.outDir, { recursive: true, force: true });
 
             if (plat.ext === 'tar.gz') {
                 extractTarGz(tmpFile, plat.outDir);

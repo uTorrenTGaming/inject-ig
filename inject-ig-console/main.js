@@ -107,6 +107,13 @@ function findJavaBinary() {
     const isWin = process.platform === 'win32';
     const javaBin = isWin ? 'java.exe' : 'java';
 
+    const ensureExecutable = (binPath) => {
+        if (!isWin && fs.existsSync(binPath)) {
+            try { fs.chmodSync(binPath, 0o755); } catch(e) {}
+        }
+        return binPath;
+    };
+
     // 🥇 PRIORIDADE 1 — JRE BUNDLED dentro do app (quando empacotado)
     // Localização: <app>/Contents/Resources/jre/bin/java  (Mac/Linux)
     //              <install>/resources/jre/bin/java.exe   (Windows)
@@ -117,9 +124,23 @@ function findJavaBinary() {
         }
         if (fs.existsSync(bundledJava)) {
             log.info(`[backend] Usando JRE bundled: ${bundledJava}`);
-            return bundledJava;
+            return ensureExecutable(bundledJava);
         }
         log.warn(`[backend] JRE bundled não encontrado em: ${bundledJava}`);
+    } else {
+        // 🥇 PRIORIDADE 1.5 — JRE Local (Dev Mode)
+        let devJava = '';
+        if (process.platform === 'darwin') {
+            devJava = path.join(__dirname, 'jre', 'mac', 'Contents', 'Home', 'bin', javaBin);
+        } else if (process.platform === 'win32') {
+            devJava = path.join(__dirname, 'jre', 'win', 'bin', javaBin);
+        } else {
+            devJava = path.join(__dirname, 'jre', 'linux', 'bin', javaBin);
+        }
+        if (fs.existsSync(devJava)) {
+            log.info(`[backend] Usando JRE local (dev): ${devJava}`);
+            return ensureExecutable(devJava);
+        }
     }
 
     // 🥈 PRIORIDADE 2 — JAVA_HOME definido pelo sistema
@@ -848,13 +869,15 @@ function startBackend(callback) {
         '-Xmx256m',          // Max 256MB RAM
         '-XX:+UseG1GC',
         '-Djava.awt.headless=true',
-        '-Dspring.datasource.url=jdbc:h2:file:' + path.join(dataDir, 'nexusdb') + ';DB_CLOSE_ON_EXIT=FALSE',
+        '-Dspring.datasource.url=jdbc:h2:file:' + path.join(dataDir, 'nexusdb').replace(/\\/g, '/') + ';DB_CLOSE_ON_EXIT=FALSE',
         '-Dspring.datasource.driverClassName=org.h2.Driver',
         '-Dspring.jpa.database-platform=org.hibernate.dialect.H2Dialect',
         '-Dserver.port=8080',
         '-jar',
         jarPath
     ];
+    console.log('[DEBUG] dataDir:', dataDir);
+    console.log('[DEBUG] jvmArgs:', jvmArgs);
 
     let called = false;
     const doneCallback = (err) => {
@@ -876,11 +899,13 @@ function startBackend(callback) {
     });
 
     backendProcess.stdout.on('data', (data) => {
+        console.log('[JAVA] ' + data.toString());
         // Forward to main terminal if window is open
         if (mainWindow && !mainWindow.isDestroyed())
             mainWindow.webContents.send('terminal.incData', '\x1b[90m[server] ' + data.toString() + '\x1b[0m');
     });
     backendProcess.stderr.on('data', (data) => {
+        console.error('[JAVA ERROR] ' + data.toString());
         // Spring Boot logs go to stderr — not necessarily errors
         if (mainWindow && !mainWindow.isDestroyed())
             mainWindow.webContents.send('terminal.incData', '\x1b[90m[server] ' + data.toString() + '\x1b[0m');
@@ -920,14 +945,14 @@ async function launch() {
             db.connect(),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
         ]);
-        sendSplashProgress(1, 50, 'Banco de dados conectado!');
+        sendSplashProgress(1, 40, 'Banco de dados conectado!');
     } catch (e) {
         console.warn('Supabase lento ou offline, continuando sem banco:', e.message);
-        sendSplashProgress(1, 50, 'Modo offline — continuando...');
+        sendSplashProgress(1, 40, 'Modo offline — continuando...');
     }
 
     // Step 2 — Aguarda a janela principal terminar de carregar
-    sendSplashProgress(2, 80, 'Carregando interface...');
+    sendSplashProgress(2, 60, 'Carregando interface...');
     await new Promise((resolve) => {
         if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.isLoading()) {
             mainWindow.webContents.once('did-finish-load', resolve);
@@ -936,8 +961,26 @@ async function launch() {
         }
     });
 
-    // Step 3 — Tudo pronto! Troca splash → janela principal
-    sendSplashProgress(3, 100, 'Sistema pronto!');
+    // Step 3 — Inicia o backend em segundo plano e aguarda
+    sendSplashProgress(3, 80, 'Iniciando Core (Pode demorar 5-10s)...');
+    startBackend((err) => {
+        if (err) {
+            console.error('Falha ao iniciar backend local:', err.message);
+        }
+    });
+
+    try {
+        await new Promise((resolve, reject) => {
+            // Increase timeout to 90 seconds (90 attempts of 1000ms) because Spring Boot
+            // can take ~30s on first boot to create the H2 database schema.
+            waitForApi(90, 1000, resolve, reject);
+        });
+        sendSplashProgress(4, 100, 'Sistema pronto!');
+    } catch (e) {
+        sendSplashProgress(4, 100, 'Aviso: Core demorando a responder...');
+        log.error('Core timeout:', e);
+    }
+
     await new Promise(r => setTimeout(r, 400)); // Pequena pausa visual
 
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -947,13 +990,6 @@ async function launch() {
     if (splashWindow && !splashWindow.isDestroyed()) {
         splashWindow.close();
     }
-
-    // Inicia o backend silenciosamente em segundo plano (se existir)
-    startBackend((err) => {
-        if (err) {
-            console.error('Falha ao iniciar backend local:', err.message);
-        }
-    });
 }
 
 // ═════ APP LIFECYCLE ═════
