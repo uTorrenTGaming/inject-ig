@@ -5,46 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>inject-ig — Iniciando</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
 
         :root {
-            --bg: #07080d;
-            --surface: rgba(255,255,255,0.04);
-            --accent: #3b82f6;
-            --accent-glow: rgba(59,130,246,0.25);
-            --text-1: #e8eaed;
-            --text-2: #6b7280;
-            --green: #22c55e;
-            --amber: #f59e0b;
+            --bg: #000000;
+            --text-main: #FFFFFF;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --track-bg: rgba(255, 255, 255, 0.15);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         html, body {
             width: 100%; height: 100%;
             background: var(--bg);
-            font-family: 'Inter', sans-serif;
+            /* Apple-style typography */
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             -webkit-app-region: drag;
             user-select: none;
             overflow: hidden;
+            position: relative;
         }
 
-        /* Animated background orbs */
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.15;
-            animation: float 8s ease-in-out infinite;
-        }
-        .orb-1 { width: 300px; height: 300px; background: var(--accent); top: -100px; left: -100px; animation-delay: 0s; }
-        .orb-2 { width: 250px; height: 250px; background: #8b5cf6; bottom: -80px; right: -80px; animation-delay: 3s; }
-        .orb-3 { width: 200px; height: 200px; background: #06b6d4; top: 50%; right: -60px; animation-delay: 1.5s; }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-20px) scale(1.05); }
-        }
+        /* Ambient lights removed to keep pure OLED black */
 
         .container {
             width: 100%; height: 100%;
@@ -52,211 +39,144 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            padding-bottom: 30px;
             position: relative;
             z-index: 10;
         }
 
-        /* Logo area */
+        /* Clean Logo area with Liquid Glass */
         .logo-wrap {
-            margin-bottom: 40px;
-            position: relative;
-            animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            margin-bottom: 24px;
+            animation: fadeIn 0.8s ease forwards;
         }
 
-        @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.6); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
 
-        .logo-ring {
-            width: 90px; height: 90px;
-            border-radius: 24px;
-            background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15));
-            border: 1px solid rgba(59,130,246,0.3);
+        .logo-box {
+            width: 80px; height: 80px;
+            border-radius: 20px; /* Squircle appearance */
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
             display: flex; align-items: center; justify-content: center;
-            position: relative;
-            box-shadow: 0 0 40px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.1);
-        }
-
-        .logo-ring::before {
-            content: '';
-            position: absolute;
-            inset: -2px;
-            border-radius: 26px;
-            background: conic-gradient(from 0deg, transparent 70%, var(--accent) 100%);
-            animation: spin 2s linear infinite;
-            z-index: -1;
-            opacity: 0.6;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
         }
 
         .logo-text {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: -1px;
-        }
-
-        /* App name */
-        .app-name {
-            font-size: 22px;
+            font-size: 32px;
             font-weight: 600;
-            color: var(--text-1);
+            color: #FFFFFF;
             letter-spacing: -0.5px;
-            margin-bottom: 6px;
-            animation: fadeUp 0.5s ease 0.3s both;
         }
 
-        .app-version {
-            font-size: 12px;
-            color: var(--text-2);
-            margin-bottom: 50px;
-            animation: fadeUp 0.5s ease 0.4s both;
+        /* App Typography */
+        .app-name {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-main);
+            letter-spacing: -0.3px;
+            margin-bottom: 4px;
+            animation: fadeIn 0.8s ease 0.1s both;
         }
 
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .app-welcome {
+            height: 60px;
+            margin-top: -5px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 20;
         }
 
-        /* Status area */
+        .welcome-text {
+            position: absolute;
+            font-family: 'Dancing Script', cursive;
+            font-size: 48px;
+            font-weight: 700;
+            
+            /* Ultra-realistic Transparent Glass Effect */
+            color: transparent;
+            -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.7);
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(100,200,255,0.1) 40%, rgba(0,255,255,0.3) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.3)) drop-shadow(0px 0px 12px rgba(0, 255, 255, 0.2));
+
+            opacity: 0;
+            transform: scale(0.9) translateY(5px);
+            transition: opacity 1.2s cubic-bezier(0.25, 0.1, 0.25, 1), transform 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .welcome-text.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        /* Subtle Progress Area */
         .status-wrap {
-            width: 280px;
-            animation: fadeUp 0.5s ease 0.5s both;
+            width: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.8s ease 0.3s both;
         }
 
         .status-bar-bg {
             width: 100%;
-            height: 3px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 99px;
+            height: 4px;
+            background: var(--track-bg);
+            border-radius: 4px;
             overflow: hidden;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .status-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--accent), #8b5cf6);
-            border-radius: 99px;
+            background: #FFFFFF;
+            border-radius: 4px;
             width: 0%;
-            transition: width 0.4s ease;
-            box-shadow: 0 0 10px rgba(59,130,246,0.6);
+            transition: width 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
         }
 
         .status-text {
             font-size: 12px;
-            color: var(--text-2);
+            font-weight: 500;
+            color: var(--text-muted);
             text-align: center;
-            min-height: 18px;
-            transition: opacity 0.3s;
+            min-height: 16px;
+            letter-spacing: 0.2px;
         }
 
-        .status-dot {
-            display: inline-block;
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: var(--accent);
-            margin-right: 6px;
-            animation: pulse 1.5s ease-in-out infinite;
-            vertical-align: middle;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.8); }
-        }
-
-        /* Steps log */
-        .steps-log {
-            margin-top: 30px;
-            width: 280px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            animation: fadeUp 0.5s ease 0.6s both;
-        }
-
-        .step-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 11px;
-            color: var(--text-2);
-            opacity: 0;
-            transform: translateX(-10px);
-            transition: opacity 0.4s, transform 0.4s;
-        }
-
-        .step-item.active {
-            color: var(--text-1);
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .step-item.done {
-            color: var(--green);
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .step-icon {
-            width: 16px; height: 16px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 9px;
-            flex-shrink: 0;
-        }
-
-        .step-item.active .step-icon {
-            background: rgba(59,130,246,0.2);
-            border: 1px solid rgba(59,130,246,0.4);
-            animation: pulse 1s ease-in-out infinite;
-        }
-
-        .step-item.done .step-icon {
-            background: rgba(34,197,94,0.15);
-            border: 1px solid rgba(34,197,94,0.3);
-            color: var(--green);
-        }
-
-        .step-item.pending .step-icon {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-        }
-
-        /* Bottom branding */
-        .footer {
-            position: absolute;
-            bottom: 24px;
-            font-size: 10px;
-            color: rgba(255,255,255,0.15);
-            animation: fadeUp 0.5s ease 1s both;
-        }
     </style>
 </head>
 <body>
 
-    <!-- Animated background orbs -->
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-
     <div class="container">
-
         <!-- Logo -->
         <div class="logo-wrap">
-            <div class="logo-ring">
-                <span class="logo-text">IG</span>
+            <div class="logo-box">
+                <svg class="logo-svg" width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Clean, rounded Apple-style typography for "IG" with glowing drop shadow -->
+                    <g filter="drop-shadow(0px 2px 8px rgba(255,255,255,0.4))">
+                        <rect x="16" y="20" width="14" height="60" rx="7" fill="#FFFFFF"/>
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M86 54C86 50.686 83.314 48 80 48H64C60.686 48 58 45.314 58 42C58 38.686 60.686 36 64 36H78.36C75.24 28.5 68.22 23 60 23C48.4 23 39 32.4 39 44V56C39 67.6 48.4 77 60 77C68.95 77 76.58 71.3 79.2 63H64C60.686 63 58 60.314 58 57C58 53.686 60.686 51 64 51H80C83.314 51 86 53.686 86 57V63C86 78.46 74.46 91 60 91C41.77 91 27 76.23 27 58V42C27 23.77 41.77 9 60 9C73.86 9 85.74 17.55 89.6 30.2C90.6 33.5 88.8 37 85.5 38C82.2 39 78.7 37.2 77.7 33.9C74.6 24.8 68 18.5 60 18.5C46.47 18.5 35.5 29.47 35.5 43V57C35.5 70.53 46.47 81.5 60 81.5C69.45 81.5 77.6 76.1 81.5 68H64C64 68 64 68 64 68H80C84.418 68 88 64.418 88 60V54H86Z" fill="#FFFFFF"/>
+                        <path d="M80 48H64C59.58 48 56 44.42 56 40C56 35.58 59.58 32 64 32H79C81.76 32 84 34.24 84 37V44C84 46.21 82.21 48 80 48Z" fill="#FFFFFF"/>
+                    </g>
+                </svg>
             </div>
         </div>
 
         <!-- Name -->
         <div class="app-name">inject-ig</div>
-        <div class="app-version">Console v2.0 — Iniciando Sistema</div>
+        <div class="app-welcome">
+            <span class="welcome-text active" id="welcome-target">Bem-vindo</span>
+        </div>
 
         <!-- Progress bar -->
         <div class="status-wrap">
@@ -264,33 +184,10 @@
                 <div class="status-bar-fill" id="progress-fill"></div>
             </div>
             <div class="status-text" id="status-text">
-                <span class="status-dot"></span>Preparando ambiente...
+                Preparando ambiente...
             </div>
         </div>
-
-        <!-- Step log -->
-        <div class="steps-log" id="steps-log">
-            <div class="step-item pending" id="step-java">
-                <div class="step-icon">○</div>
-                <span>Verificando Java Runtime</span>
-            </div>
-            <div class="step-item pending" id="step-server">
-                <div class="step-icon">○</div>
-                <span>Iniciando servidor interno</span>
-            </div>
-            <div class="step-item pending" id="step-api">
-                <div class="step-icon">○</div>
-                <span>Aguardando API na porta 8080</span>
-            </div>
-            <div class="step-item pending" id="step-ready">
-                <div class="step-icon">○</div>
-                <span>Carregando interface</span>
-            </div>
-        </div>
-
     </div>
-
-    <div class="footer">inject-ig — Sistema de Vigilância Digital</div>
 
     <script>
         // Splash screen controlled by IPC from main.js
@@ -307,32 +204,40 @@
             fill.style.width = progress + '%';
 
             if (message) {
-                statusText.innerHTML = `<span class="status-dot"></span>${message}`;
+                // Remove the "(Pode demorar 5-10s)..." from strings if you want it cleaner,
+                // but we will just pass it directly for now.
+                statusText.innerText = message;
             }
-
-            const steps = ['step-java', 'step-server', 'step-api', 'step-ready'];
-            steps.forEach((id, i) => {
-                const el = document.getElementById(id);
-                if (i < step) {
-                    el.className = 'step-item done';
-                    el.querySelector('.step-icon').innerHTML = '✓';
-                } else if (i === step) {
-                    el.className = 'step-item active';
-                    el.querySelector('.step-icon').innerHTML = '●';
-                } else {
-                    el.className = 'step-item pending';
-                    el.querySelector('.step-icon').innerHTML = '○';
-                }
-            });
         }
+
+        // iOS-style Welcome Animation
+        const greetings = ['olá', 'hello', 'hola', 'bonjour', 'ciao', 'hallo', 'bem-vindo'];
+        let greetIndex = 0;
+        const welcomeEl = document.getElementById('welcome-target');
+
+        setInterval(() => {
+            // Fade out
+            welcomeEl.classList.remove('active');
+            
+            setTimeout(() => {
+                // Change text while invisible
+                greetIndex = (greetIndex + 1) % greetings.length;
+                welcomeEl.innerText = greetings[greetIndex];
+                
+                // Fade in
+                welcomeEl.classList.add('active');
+            }, 1200); // Wait for fade out to complete before changing text
+            
+        }, 3000); // Show each word for 3 seconds
 
         // Demo animation (used when called without IPC, for visual testing)
         let demoStep = 0;
         const demoSteps = [
-            { step: 0, progress: 15, message: 'Verificando Java Runtime...' },
-            { step: 1, progress: 40, message: 'Iniciando servidor interno...' },
-            { step: 2, progress: 70, message: 'Aguardando API na porta 8080...' },
+            { step: 0, progress: 15, message: 'Verificando sistema...' },
+            { step: 1, progress: 40, message: 'Iniciando serviços...' },
+            { step: 2, progress: 70, message: 'Conectando ambiente...' },
             { step: 3, progress: 95, message: 'Carregando interface...' },
+            { step: 4, progress: 100, message: 'Pronto' },
         ];
 
         if (!window.splashAPI) {

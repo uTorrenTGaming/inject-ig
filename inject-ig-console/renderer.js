@@ -16,6 +16,7 @@ const term = new window.Terminal({
     fontFamily: "'Geist Mono', 'SF Mono', monospace",
     fontSize: 12,
     lineHeight: 1.45,
+    disableStdin: true,
     theme: {
         background: '#08090c',
         foreground: '#e8eaed',
@@ -85,15 +86,11 @@ document.body.addEventListener('click', () => {
     AudioEngine.playClick();
 });
 
-term.prompt = () => {
-    term.write('\r\n\x1b[90m$\x1b[0m ');
-};
-
 term.writeln('\x1b[90m───────────────────────\x1b[0m');
-term.writeln('  \x1b[1minject-ig\x1b[0m  \x1b[90mTerminal\x1b[0m');
+term.writeln('  \x1b[1minject-ig\x1b[0m  \x1b[90mTerminal (Modo Leitura)\x1b[0m');
 term.writeln('\x1b[90m───────────────────────\x1b[0m');
-term.writeln('  \x1b[90mDigite\x1b[0m ajuda');
-term.prompt();
+term.writeln('\x1b[90m[Entrada de comandos desativada. Apenas para logs.]\x1b[0m');
+term.writeln('');
 
 // ═══════════ Navigation Logic ═══════════
 const segBtns = document.querySelectorAll('.seg-btn[data-target]');
@@ -1461,22 +1458,6 @@ window.electronAPI.onTerminalData((data) => {
         if (i > 0) term.write('\r\n');
         term.write(l.replace(/\r/g, ''));
     });
-    term.prompt();
-});
-
-term.onKey(e => {
-    const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
-    if (e.domEvent.keyCode === 13) {
-        if (commandBuffer.trim()) {
-            const cmd = commandBuffer.toLowerCase().trim();
-            if (cmd === 'ajuda') term.writeln('\r\najuda, limpar, injetar, core');
-            else if (cmd === 'limpar') { term.clear(); term.write('\x1b[H\x1b[2J'); }
-            else { term.write('\r\n'); window.electronAPI.sendTerminalKeystroke(commandBuffer); }
-        } else term.write('\r\n');
-        commandBuffer = ''; term.prompt();
-    } else if (e.domEvent.keyCode === 8) {
-        if (commandBuffer) { term.write('\b \b'); commandBuffer = commandBuffer.slice(0, -1); }
-    } else if (printable) { commandBuffer += e.key; term.write(e.key); }
 });
 
 // ═══════════ Window Controls ═══════════
@@ -1955,8 +1936,28 @@ window.addEventListener('DOMContentLoaded', async () => {
         } else {
             // Needs registration, stay on authView (Setup Profile)
         }
-    } catch (e) {
-        console.error('Auto login error:', e);
+    } catch (err) {
+        console.error('Failed to load license', err);
+    }
+});
+
+// Event Listeners para a Licença
+document.getElementById('btn-show-policies')?.addEventListener('click', () => {
+    const modal = document.getElementById('modal-policies');
+    if (modal) {
+        modal.style.opacity = '0';
+        modal.style.transition = 'opacity 0.3s ease';
+        modal.style.display = 'flex';
+        // Pequeno atraso para a animação de opacidade
+        setTimeout(() => modal.style.opacity = '1', 10);
+    }
+});
+
+document.getElementById('btn-close-policies')?.addEventListener('click', () => {
+    const modal = document.getElementById('modal-policies');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => modal.style.display = 'none', 300);
     }
 });
 
@@ -2224,47 +2225,67 @@ async function loadLicenseSettings() {
             }
 
             if (license.expires_at) {
-                const now = new Date();
                 const expires = new Date(license.expires_at);
                 const activated = new Date(license.activated_at || license.created_at);
-                
-                const diffTime = Math.max(0, expires - now);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                if (daysLeft) daysLeft.innerText = `${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
-
                 const totalTime = Math.max(1, expires - activated);
-                const percentLeft = Math.max(0, Math.min(100, (diffTime / totalTime) * 100));
-                
-                if (progress) progress.style.width = `${percentLeft}%`;
 
-                if (diffDays <= 3) {
-                    if (progress) progress.style.background = 'var(--amber)';
-                    if (badge) {
-                        badge.style.background = 'rgba(245, 158, 11, 0.15)';
-                        badge.style.color = 'var(--amber)';
-                        badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                if (window.licenseInterval) clearInterval(window.licenseInterval);
+
+                const updateTimer = () => {
+                    const now = new Date();
+                    const diffTime = Math.max(0, expires - now);
+                    
+                    if (diffTime <= 0) {
+                        if (daysLeft) daysLeft.innerText = '0d 0h 0m 0s';
+                        if (progress) { progress.style.width = '0%'; progress.style.background = 'var(--red)'; }
+                        clearInterval(window.licenseInterval);
+                        return;
                     }
-                    if (alertMsg) alertMsg.style.display = 'block';
-                    if (diffDays === 0) {
-                        if (progress) progress.style.background = 'var(--red)';
-                        if (daysLeft) daysLeft.innerText = 'Expira hoje';
+
+                    const d = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    const h = Math.floor((diffTime / (1000 * 60 * 60)) % 24);
+                    const m = Math.floor((diffTime / 1000 / 60) % 60);
+                    const s = Math.floor((diffTime / 1000) % 60);
+
+                    if (daysLeft) {
+                        daysLeft.innerHTML = `<span style="font-size:20px;">${d}d</span> <span style="font-size:14px; color:var(--text-2); font-weight: 500;">${h}h ${m}m ${s}s</span>`;
                     }
-                } else {
-                    if (progress) progress.style.background = 'var(--green)';
-                    if (alertMsg) alertMsg.style.display = 'none';
-                    if (badge) {
-                        badge.style.background = 'rgba(52,211,153,0.15)';
-                        badge.style.color = 'var(--green)';
-                        badge.style.borderColor = 'rgba(52,211,153,0.3)';
-                        badge.innerHTML = '<span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span> Ativo';
+
+                    const percentLeft = Math.max(0, Math.min(100, (diffTime / totalTime) * 100));
+                    if (progress) progress.style.width = `${percentLeft}%`;
+
+                    if (d <= 3) {
+                        if (progress) progress.style.background = 'var(--amber)';
+                        if (badge) {
+                            badge.style.background = 'rgba(245, 158, 11, 0.15)';
+                            badge.style.color = 'var(--amber)';
+                            badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                        }
+                        if (alertMsg) alertMsg.style.display = 'block';
+                    } else {
+                        if (progress) progress.style.background = 'var(--green)';
+                        if (alertMsg) alertMsg.style.display = 'none';
+                        if (badge) {
+                            badge.style.background = 'rgba(52,211,153,0.15)';
+                            badge.style.color = 'var(--green)';
+                            badge.style.borderColor = 'rgba(52,211,153,0.3)';
+                            badge.innerHTML = '<span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span> Ativo';
+                        }
                     }
-                }
+                };
+
+                updateTimer();
+                window.licenseInterval = setInterval(updateTimer, 1000);
+
             } else {
-                if (daysLeft) daysLeft.innerText = 'Vitalício';
+                if (window.licenseInterval) clearInterval(window.licenseInterval);
+                if (daysLeft) {
+                    daysLeft.innerHTML = `<div style="background: rgba(255, 59, 48, 0.15); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 59, 48, 0.3); color: #ff3b30; padding: 4px 10px; border-radius: 8px; font-size: 14px; font-weight: 800; display: inline-block; box-shadow: 0 4px 12px rgba(255, 59, 48, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1); letter-spacing: 0.5px;">PERMANENTE</div>`;
+                }
                 if (progress) {
                     progress.style.width = '100%';
-                    progress.style.background = 'var(--accent)';
+                    progress.style.background = 'var(--red)';
+                    progress.style.boxShadow = '0 0 10px rgba(255,59,48,0.5)';
                 }
                 if (alertMsg) alertMsg.style.display = 'none';
             }
