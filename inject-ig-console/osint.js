@@ -179,6 +179,6 @@ class OSINTApp {
 }
 
 // Inicializar globalmente assim que o DOM carregar
-document.addEventListener('DOMContentLoaded', () => {
+setTimeout(() => {
     window.osintApp = new OSINTApp();
-});
+}, 100);

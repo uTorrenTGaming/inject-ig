@@ -45,6 +45,9 @@
             overflow: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            font-size: 13px; /* Apple native base size */
+            line-height: 1.4;
         }
 
         /* ═══════════ SHELL (Liquid Glass) ═══════════ */
@@ -52,12 +55,11 @@
             width: 100%; height: 100%;
             background: var(--surface-app);
             /* Backdrop filters para Windows. No macOS a aceleração usa GPU Nativa */
-            backdrop-filter: blur(80px) saturate(150%);
-            -webkit-backdrop-filter: blur(80px) saturate(150%);
+            backdrop-filter: var(--app-blur, blur(40px) saturate(150%));
+            -webkit-backdrop-filter: var(--app-blur, blur(40px) saturate(150%));
             /* Hardware Acceleration Hints */
             will-change: transform, backdrop-filter;
             transform: translateZ(0);
-            
             border-radius: 16px;
             border: 1px solid var(--border-1);
             display: flex; flex-direction: column;
@@ -66,6 +68,57 @@
                 inset 0 1px 1px rgba(255,255,255,0.2), 
                 0 25px 50px -12px rgba(0,0,0,0.6);
             position: relative;
+        }
+
+        /* ═══════════ GRAPHICS SETTINGS ═══════════ */
+        body.graphics-low {
+            --app-blur: none;
+            --surface-app: #121318;
+            --glow-intensity: 0px;
+        }
+        body.graphics-low * {
+            transition: none !important;
+            animation: none !important;
+        }
+        
+        body.graphics-medium {
+            --app-blur: blur(20px) saturate(120%);
+            --surface-app: rgba(10, 12, 16, 0.85);
+            --glow-intensity: 2px;
+        }
+
+        body.graphics-ultra {
+            --app-blur: blur(80px) saturate(200%);
+            --surface-app: rgba(0, 0, 0, 0.3);
+            --glow-intensity: 15px;
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 var(--glow-intensity, 0px) currentColor;
+        }
+
+        /* ═══════════ BACKGROUND ORBS (ULTRA ONLY) ═══════════ */
+        #bg-orbs {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+            display: none; /* Default off */
+        }
+        body.graphics-ultra #bg-orbs {
+            display: block;
+        }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.5;
+            animation: float-orb 20s infinite alternate ease-in-out;
+        }
+        @keyframes float-orb {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 100px) scale(1.5); }
         }
 
         /* ═══════════ TITLEBAR ═══════════ */
@@ -139,7 +192,10 @@
             -ms-overflow-style: none;  /* IE and Edge */
             scrollbar-width: none;  /* Firefox */
         }
-        .segmented::-webkit-scrollbar { display: none; }
+        .segmented::-webkit-scrollbar { height: 6px; }
+        .segmented::-webkit-scrollbar-track { background: transparent; }
+        .segmented::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        .segmented::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
         .seg-btn {
             flex: 0 0 auto;
             padding: 6px 12px;
@@ -173,9 +229,10 @@
 
         /* ═══════════ VIEWS ═══════════ */
         .view {
-            display: none; flex-direction: column; flex: 1;
+            display: none; flex-direction: column; flex: 1 1 0;
             padding: 0 16px 16px;
             overflow-y: auto; overflow-x: hidden;
+            width: 100%; min-height: 0;
         }
         .view.active { display: flex; animation: fadeUp 0.3s var(--ease); }
 
@@ -311,7 +368,7 @@
 
         /* ═══════════ TERMINAL ═══════════ */
         .terminal-wrap {
-            flex: 1;
+            flex: 1 1 0;
             border-radius: 12px;
             overflow: hidden;
             background: rgba(0, 0, 0, 0.3);
@@ -320,6 +377,8 @@
             border: 1px solid var(--border-1);
             box-shadow: inset 0 4px 12px rgba(0,0,0,0.3);
             padding: 8px;
+            display: flex; /* Helps xterm scale inside */
+            flex-direction: column;
         }
 
         /* ═══════════ DATA LAYER ═══════════ */
@@ -330,8 +389,9 @@
             border: 1px solid var(--border-1);
             border-radius: 12px;
             padding: 14px;
-            max-height: 200px;
+            max-height: 250px; /* Increased slightly for better fit */
             overflow-y: auto;
+            overflow-x: hidden;
             box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
         }
         .row {
@@ -450,16 +510,16 @@
             animation: pulse-ring 2s var(--ease) infinite;
         }
 
-        /* ═══════════ SCROLLBAR ═══════════ */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        /* ═══════════ SCROLLBAR (Apple Style) ═══════════ */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            border: 2px solid transparent;
-            background-clip: padding-box;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
         }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.35); }
+        ::-webkit-scrollbar-corner { background: transparent; }
+        * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
 
         /* ═══════════ SECTION LABELS ═══════════ */
         .section-label {
@@ -628,6 +688,196 @@
         .tut-content li { margin-bottom: 4px; }
         .tut-content b { color: var(--text-1); }
 
+        /* ═══════════ BENTO GRID ═══════════ */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding-bottom: 20px;
+        }
+        .bento-item {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 24px rgba(0,0,0,0.2);
+            transition: all 0.3s var(--ease);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        .bento-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        .bento-col-span-2 { grid-column: span 2; }
+        
+        .bento-title {
+            font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 4px;
+        }
+        .bento-desc {
+            font-size: 11px; color: var(--text-3); margin-bottom: 12px;
+        }
+        
+        /* Radar pulse for Bento */
+        .bento-radar-wrap {
+            position: relative;
+            width: 100%; height: 100px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .bento-radar-circle {
+            width: 60px; height: 60px; border-radius: 50%;
+            border: 1px solid var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .bento-radar-circle::after {
+            content: ''; position: absolute; inset: -1px; border-radius: 50%;
+            border: 1px solid var(--accent);
+            animation: pulse-ring 2s linear infinite;
+        }
+        .bento-radar-sweep {
+            position: absolute; width: 50%; height: 50%; top: 0; left: 50%;
+            background: linear-gradient(90deg, transparent, rgba(10, 132, 255, 0.5));
+            transform-origin: bottom left;
+            animation: radarSweep 3s linear infinite;
+        }
+        @keyframes radarSweep {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Matrix Feed for Bento */
+        .bento-matrix {
+            flex: 1; min-height: 80px;
+            background: rgba(0,0,0,0.4); border-radius: 12px;
+            border: 1px solid var(--border-1);
+            padding: 8px 12px; overflow: hidden;
+            font-family: var(--mono); font-size: 10px; color: var(--green);
+            display: flex; flex-direction: column; justify-content: flex-end;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .matrix-line { opacity: 0.8; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* ═══════════ CYBERPUNK THEME ═══════════ */
+        html.theme-cyberpunk {
+            --accent: #FF2A2A;
+            --accent-muted: rgba(255, 42, 42, 0.2);
+            --green: #FF0055;
+            --green-muted: rgba(255, 0, 85, 0.2);
+            --surface-app: rgba(20, 0, 0, 0.6);
+        }
+        html.theme-cyberpunk .scan-progress-fill { background: linear-gradient(90deg, #FF2A2A, #FF0055, #FF2A2A); }
+        html.theme-cyberpunk .bento-matrix { color: #FF2A2A; }
+
+        /* ═══════════ XP TOAST ═══════════ */
+        .xp-toast {
+            position: absolute; top: 60px; right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 8px 16px; border-radius: 20px;
+            font-size: 14px; font-weight: 700; font-family: var(--mono);
+            box-shadow: 0 4px 15px var(--accent-muted);
+            z-index: 9999;
+            pointer-events: none;
+            animation: xpToastAnim 2s forwards ease-out;
+        }
+        @keyframes xpToastAnim {
+            0% { opacity: 0; transform: translateY(20px) scale(0.8); }
+            15% { opacity: 1; transform: translateY(0) scale(1.1); }
+            30% { transform: scale(1); }
+            80% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+
+        /* ═══════════ XP BAR ═══════════ */
+        .xp-bar-container {
+            width: 100%; height: 6px; background: rgba(255,255,255,0.1);
+            border-radius: 4px; overflow: hidden; margin-top: 8px;
+        }
+
+        .xp-bar-fill {
+            height: 100%; background: var(--accent);
+            width: 0%; transition: width 0.5s var(--ease);
+        }
+
+        /* ═══════════ iPHONE 3D MODE (Pro Max Mirroring) ═══════════ */
+        body.iphone-3d-mode {
+            background: transparent !important;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            perspective: 2000px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        body.iphone-3d-mode::before {
+            display: none;
+        }
+        body.iphone-3d-mode .app {
+            width: 430px !important;
+            height: 932px !important;
+            flex: none;
+            border-radius: 55px; /* Pro Max rounded corners */
+            border: 12px solid #000; /* Inner bezel */
+            box-shadow: 
+                0 0 0 2px #555, /* inner metal edge */
+                0 0 0 6px #2a2a2c, /* titanium frame */
+                0 0 0 7px #111, /* outer shadow edge */
+                0 40px 80px rgba(0,0,0,0.8), /* drop shadow */
+                -20px -20px 60px rgba(255,255,255,0.05); /* ambient light */
+            transform: scale(0.85);
+            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+            position: relative;
+            margin: auto;
+            transform-style: preserve-3d;
+        }
+        
+        /* Dynamic Island */
+        body.iphone-3d-mode .app::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 125px;
+            height: 37px;
+            background: #000;
+            border-radius: 24px;
+            z-index: 999999;
+            box-shadow: inset 0 -1px 2px rgba(255,255,255,0.15), 0 2px 10px rgba(0,0,0,0.5);
+            pointer-events: none;
+            transition: width 0.3s var(--ease), height 0.3s var(--ease);
+        }
+        
+        /* Camera Lens in Dynamic Island */
+        body.iphone-3d-mode .app::after {
+            content: '';
+            position: absolute;
+            top: 24px;
+            left: calc(50% + 42px);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 3px 3px, #1a1a1a 0%, #000 100%);
+            box-shadow: inset 0 0 2px rgba(255,255,255,0.3);
+            z-index: 9999999;
+            pointer-events: none;
+        }
+
+        body.iphone-3d-mode .titlebar {
+            padding-top: 35px;
+            height: 75px;
+            border-bottom: none;
+        }
+        body.iphone-3d-mode .traffic {
+            display: none; /* Hide macOS buttons */
+        }
     </style>
 </head>
 <body>
@@ -659,7 +909,8 @@
         <!-- ═══ Segmented Control ═══ -->
         <div class="toolbar" id="main-toolbar" style="display: none;">
             <div class="segmented">
-                <button class="seg-btn active" data-target="view-terminal">Terminal</button>
+                <button class="seg-btn active" data-target="view-dashboard">Início</button>
+                <button class="seg-btn" data-target="view-terminal">Terminal</button>
                 <button class="seg-btn" data-target="view-inject">Injeção</button>
                 <button class="seg-btn" data-target="view-vault">Arquivos</button>
                 <button class="seg-btn" data-target="view-tools">Ferramentas</button>
@@ -739,35 +990,108 @@
             </div>
         </div>
 
+        <!-- ═══ Dashboard (Bento Box) ═══ -->
+        <div id="view-dashboard" class="view">
+            <div class="bento-grid">
+                
+                <!-- Widget 1: Identidade -->
+                <div class="bento-item bento-col-span-2 liquid-glass-card" style="padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 16px; width: 100%;">
+                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=b6e3f4" id="bento-avatar" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; flex-shrink: 0;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div>
+                                    <div class="bento-title" style="font-size: 18px;" id="bento-name">Operador Logado</div>
+                                    <div class="tag tag-green" style="margin-top: 4px;" id="bento-level-badge">Nível 1 - Operador</div>
+                                </div>
+                                <div style="font-size: 10px; color: var(--text-3); font-family: var(--mono); text-align: right;">
+                                    <span id="bento-xp-text">0 / 100 XP</span><br>
+                                    HWID Validado
+                                </div>
+                            </div>
+                            <div class="xp-bar-container">
+                                <div class="xp-bar-fill" id="bento-xp-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Widget 2: Ações Rápidas -->
+                <div class="bento-item">
+                    <div class="bento-title">Ações Rápidas</div>
+                    <div class="bento-desc">Início imediato</div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn btn-ghost" onclick="document.querySelector('[data-target=\'view-vault\']').click()" style="justify-content: flex-start; padding: 8px 12px; font-size: 11px;">🔍 Varrer Site</button>
+                        <button class="btn btn-ghost" onclick="document.querySelector('[data-target=\'view-spectre\']').click()" style="justify-content: flex-start; padding: 8px 12px; font-size: 11px;">👁️ Iniciar Espetor</button>
+                        <button class="btn btn-primary" onclick="document.querySelector('[data-target=\'view-terminal\']').click()" style="justify-content: flex-start; padding: 8px 12px; font-size: 11px;">💻 Abrir Terminal</button>
+                    </div>
+                </div>
+
+                <!-- Widget 3: Radar de Saúde -->
+                <div class="bento-item">
+                    <div class="bento-title">Radar de Saúde</div>
+                    <div class="bento-desc">Monitoramento local</div>
+                    <div class="bento-radar-wrap">
+                        <div class="bento-radar-circle">
+                            <div class="bento-radar-sweep"></div>
+                            <div class="pulse-dot"></div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-size: 10px; color: var(--accent); margin-top: 8px; font-weight: 600;">BUSCANDO AMEAÇAS...</div>
+                </div>
+
+                <!-- Widget 4: Matrix Feed -->
+                <div class="bento-item bento-col-span-2">
+                    <div class="bento-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Terminal Live Feed</span>
+                        <div class="tag tag-blue">ACTIVE</div>
+                    </div>
+                    <div class="bento-matrix" id="bento-matrix-feed">
+                        <!-- Lines will be injected by JS -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
         <!-- ═══ Terminal ═══ -->
         <div id="view-terminal" class="view" style="gap: 10px; height: 100%; overflow: hidden;">
             <div class="terminal-wrap" id="terminal-container" style="flex: 1;"></div>
         </div>
 
         <!-- ═══ Espetor (Phishing + Câmera) ═══ -->
-        <div id="view-spectre" class="view">
-            <div class="card" style="margin-bottom: 8px;">
+        <div id="view-spectre" class="view" style="gap: 8px; padding-bottom: 20px;">
+            <div class="card" style="margin-bottom: 0;">
                 <div class="card-label" style="color: var(--amber)">Espionagem Remota</div>
                 <div class="card-title">Módulo Espetor</div>
-                <div class="card-desc">Gere um link para envio. Assim que a vítima aceitar a visualização de mídia no site Isca, o feed será iniciado via WebSocket.</div>
+                <div class="card-desc">Interceptação Web (via link) ou Captura Local via USB (Android/iOS).</div>
                 
-                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px;">
-                    <code id="spectre-link" style="color: var(--accent); font-size: 12px; user-select: all; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1;">Aguardando IP Local...</code>
-                    <div style="display: flex; gap: 6px;">
-                        <button class="btn btn-ghost" id="btn-copy-spectre" style="width: auto; padding: 6px 12px; font-size: 11px;">Copiar URL</button>
-                        <button class="btn btn-primary" id="btn-tunnel-spectre" style="width: auto; padding: 6px 12px; font-size: 11px;">Túnel Público</button>
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; min-width: 0; max-width: 100%; box-sizing: border-box;">
+                    <code id="spectre-link" style="color: var(--accent); font-size: 11px; user-select: all; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; width: 100%;">Aguardando IP Local...</code>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; width: 100%;">
+                        <button class="btn btn-ghost" id="btn-copy-spectre" style="flex: 1; min-width: 100px; padding: 6px; font-size: 11px;">Copiar URL</button>
+                        <button class="btn btn-primary" id="btn-tunnel-spectre" style="flex: 1; min-width: 100px; padding: 6px; font-size: 11px;">Túnel Público</button>
+                        <button class="btn btn-green" id="btn-start-spectre" style="flex: 1; min-width: 120px; padding: 6px; font-size: 11px;">Iniciar Web</button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button class="btn btn-green" id="btn-start-spectre" style="flex: 1;">Conectar Servidor (Rede)</button>
-                    <button class="btn btn-primary" id="btn-start-usb" style="flex: 1; background: var(--accent);">Interceptar via USB</button>
+                
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+                    <div style="display: flex; gap: 6px;">
+                        <select id="spectre-device-select" style="flex: 1; min-width: 0; padding: 8px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 6px; font-size: 11px; text-overflow: ellipsis;">
+                            <option value="">Nenhum celular detectado</option>
+                        </select>
+                        <button class="btn btn-ghost" id="btn-spectre-scan" style="padding: 8px; flex: 0 0 auto;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.44l5.36-1.36"></path></svg>
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" id="btn-start-usb" style="width: 100%; background: var(--accent);">Interceptar Tela USB</button>
                 </div>
             </div>
 
-            <div class="card" style="padding: 0; overflow: hidden; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; position: relative;">
-                <div id="spectre-idle" style="position: absolute; z-index: 10; font-family: var(--mono); font-size: 11px; color: var(--text-3);">Aguardando Stream de Vídeo...</div>
-                <img id="spectre-feed" style="width: 100%; height: auto; max-height: 100%; object-fit: contain; position: relative; z-index: 20; display: none;" />
-                <video id="spectre-usb-feed" autoplay playsinline style="width: 100%; height: auto; max-height: 100%; object-fit: contain; position: relative; z-index: 20; display: none;"></video>
+            <div class="card" style="padding: 0; overflow: hidden; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; flex: 1 1 0; position: relative; border-radius: 8px;">
+                <div id="spectre-idle" style="position: absolute; z-index: 10; font-family: var(--mono); font-size: 11px; color: var(--text-3); text-align: center; padding: 10px;">Aguardando Stream...</div>
+                <img id="spectre-feed" style="width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0; z-index: 20; display: none;" />
+                <video id="spectre-usb-feed" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0; z-index: 20; display: none;"></video>
             </div>
         </div>
 
@@ -805,27 +1129,27 @@
             </div>
 
             <!-- Resumo -->
-            <div id="pane-data" style="display: flex; flex-direction: column; gap: 6px;">
+            <div id="pane-data" style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 0; overflow-y: auto;">
                 <div class="scan-progress" id="scan-progress">
                     <div class="scan-progress-fill" id="scan-progress-fill"></div>
                 </div>
                 <div id="scan-score-area"></div>
                 <div id="scan-status-area"></div>
-                <div class="data-well" id="vault-results" style="max-height: none;">
+                <div class="data-well" id="vault-results" style="max-height: none; flex: 1 1 0;">
                     <div style="text-align: center; color: var(--text-3); font-size: 10px; padding: 20px 0;">Nenhum alvo varrido</div>
                 </div>
-                <button class="btn btn-ghost" id="btn-save-report" style="font-size: 10px;">Exportar JSON</button>
+                <button class="btn btn-ghost" id="btn-save-report" style="font-size: 10px; margin-top: auto;">Exportar JSON</button>
             </div>
 
             <!-- Arquivos -->
-            <div id="pane-files" style="display: none; flex-direction: column; gap: 4px; overflow-y: auto;">
+            <div id="pane-files" style="display: none; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1 1 0;">
                 <div id="main-files-list" style="display: flex; flex-direction: column; gap: 4px;">
                     <div style="text-align: center; color: var(--text-3); font-size: 10px; padding: 20px 0;">Execute uma varredura primeiro</div>
                 </div>
             </div>
 
             <!-- Monitor -->
-            <div id="pane-monitor" style="display: none; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 320px;">
+            <div id="pane-monitor" style="display: none; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1 1 0;">
                 <div class="card" style="padding: 12px; margin-bottom: 0;">
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -907,6 +1231,7 @@
                 <div class="card-label">Utilitários</div>
                 <div class="card-title">Ferramentas de Auditoria</div>
                 <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <input type="text" id="tool-target" placeholder="URL Alvo (ex: https://site.com)" style="flex: 1; padding: 8px; font-size: 12px; border-color: var(--accent);">
                     <input type="text" id="tool-search" placeholder="Buscar ferramenta..." style="flex: 1; padding: 8px; font-size: 12px;">
                 </div>
             </div>
@@ -934,6 +1259,7 @@
                 <div class="card-title" style="color: var(--red);">Arsenal Ofensivo</div>
                 <div class="card-desc" style="color: var(--text-2);">Módulos intrusivos. O uso não autorizado é crime.</div>
                 <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <input type="text" id="exploit-target" placeholder="URL Alvo (ex: https://site.com)" style="flex: 1; padding: 8px; font-size: 12px; border-color: rgba(239,68,68,0.5); color: var(--red);">
                     <input type="text" id="exploit-search" placeholder="Buscar exploit..." style="flex: 1; padding: 8px; font-size: 12px; border-color: rgba(239,68,68,0.2);">
                 </div>
                 <div style="display: flex; gap: 8px; margin-top: 8px;">
@@ -988,44 +1314,36 @@
         <!-- ═══ Mobile Deployer ═══ -->
         <div id="view-mobile" class="view">
             <div class="card" style="margin-bottom: 12px;">
-                <div class="card-label">Conexão USB</div>
-                <div class="card-title">Dispositivos Conectados</div>
-                <div class="card-desc">Escaneando barramento USB por dispositivos móveis (Android ADB).</div>
-                
-                <div style="margin-top: 12px; display: flex; gap: 8px;">
-                    <button class="btn btn-ghost" id="btn-scan-devices" style="flex: 1; padding: 10px; gap: 6px;">
+                <div class="card-label">Radar USB — Captura de Logs (Syslog/Logcat)</div>
+                <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button class="btn btn-ghost" id="btn-scan-devices" style="flex: 0 0 auto; padding: 10px; gap: 6px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.44l5.36-1.36"></path></svg>
-                        <span>Escanear Portas USB</span>
                     </button>
+                    <select id="mobile-device-select" style="flex: 1; min-width: 150px; padding: 8px 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; border-radius: 6px; font-family: -apple-system, sans-serif; font-size: 13px;">
+                        <option value="">Nenhum dispositivo detectado</option>
+                    </select>
+                    <button class="btn btn-primary" id="btn-start-mobile-log" disabled>Iniciar Captura</button>
+                    <button class="btn btn-ghost" id="btn-stop-mobile-log" style="border: 1px solid rgba(255, 60, 60, 0.4); color: var(--red); display: none;">Parar</button>
+                    <button class="btn btn-ghost" id="btn-clear-mobile-log">Limpar</button>
                 </div>
             </div>
 
-            <div class="card" style="margin-bottom: 12px; flex: 1; display: flex; flex-direction: column;">
-                <div class="card-label">Radar USB</div>
-                <div id="mobile-devices-list" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;">
-                    <div style="text-align: center; color: var(--text-3); font-size: 11px; padding: 20px 0;">Nenhum dispositivo detectado. Verifique o cabo e a Depuração USB.</div>
+            <div class="card" style="flex: 1; display: flex; flex-direction: column; min-height: 400px; padding: 0; overflow: hidden; background: #0a0a0c; border: 1px solid rgba(255,255,255,0.05);">
+                <!-- Log Category Tabs -->
+                <div class="segmented" style="margin: 0; border-radius: 16px 16px 0 0; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); flex: 0 0 auto;">
+                    <div class="segment active" data-log-tab="all">Todos</div>
+                    <div class="segment" data-log-tab="error">Erros</div>
+                    <div class="segment" data-log-tab="warn">Avisos</div>
+                    <div class="segment" data-log-tab="app">Apps</div>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-label">Ação Tática</div>
-                <div class="card-title">Instalação Direta (APK)</div>
-                <div class="card-desc">Compila o Alvo Selecionado via Capacitor e joga direto pra memória do celular.</div>
-                <div style="margin-top: 12px;">
-                    <button class="btn btn-primary" id="btn-deploy-mobile" style="width: 100%; justify-content: center; gap: 8px;" disabled>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                        <span>Compilar e Instalar App Alvo</span>
-                    </button>
-                    <button class="btn btn-ghost" id="btn-deploy-agent" style="width: 100%; justify-content: center; gap: 8px; margin-top: 8px; border: 1px solid rgba(255, 60, 60, 0.4); color: var(--red);" disabled>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        <span>Injetar Agente de Coleta (Sideload iOS 7-Dias)</span>
-                    </button>
+                <div id="mobile-log-terminal" style="flex: 1; overflow-y: auto; padding: 12px; font-family: var(--mono); font-size: 11px; color: var(--text-2); white-space: pre-wrap; word-break: break-all;">
+                    <span style="color: var(--text-3);">[SYSTEM] Aguardando inicialização do módulo de log via USB...</span>
                 </div>
             </div>
         </div>
 
         <!-- ═══ AGENTE IG ═══ -->
-        <div id="view-agent-ig" class="view" style="display: none; flex-direction: column; height: 100%; padding: 0; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <div id="view-agent-ig" class="view" style="display: none; flex-direction: column; flex: 1 1 0; padding: 0; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
             
             <!-- Header do Agente -->
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
@@ -1213,22 +1531,25 @@
 
             <div class="card" style="margin-bottom: 12px;">
                 <div class="card-label">Aparência do Aplicativo</div>
-                <div class="card-title">Ajuste de Vidro (Liquid Glass)</div>
-                <div class="card-desc">Personalize a densidade e a opacidade do material da janela em tempo real.</div>
+                <div class="card-title">Motor Gráfico e Desempenho</div>
+                <div class="card-desc">Personalize o nível de renderização visual. Reduza os gráficos em PCs fracos para máxima velocidade.</div>
                 
-                <div style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button class="btn btn-ghost" id="glass-solid" style="flex: 1; flex-direction: column; gap: 8px; padding: 14px 0;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
-                        <span style="font-size: 11px;">Sólido</span>
-                    </button>
-                    <button class="btn btn-ghost" id="glass-frost" style="flex: 1; flex-direction: column; gap: 8px; padding: 14px 0;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5l-10 14M7 5l10 14"></path></svg>
-                        <span style="font-size: 11px;">Gelo</span>
-                    </button>
-                    <button class="btn btn-ghost" id="glass-water" style="flex: 1; flex-direction: column; gap: 8px; padding: 14px 0;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"></path></svg>
-                        <span style="font-size: 11px;">Água</span>
-                    </button>
+                <div class="sub-seg" style="margin-top: 12px; margin-bottom: 15px;">
+                    <button class="sub-seg-btn" id="gfx-low">Batata (Baixo)</button>
+                    <button class="sub-seg-btn active" id="gfx-medium">Balanceado (Médio)</button>
+                    <button class="sub-seg-btn" id="gfx-ultra">Cinemático (Ultra)</button>
+                </div>
+                
+                <div style="font-size: 11px; color: var(--text-2); background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border: 1px dashed var(--border-1);">
+                    <div id="gfx-desc-low" style="display: none;">
+                        <span style="color: var(--amber); font-weight: bold;">Modo Batata:</span> Foca apenas em performance. Remove blur, sombras, animações CSS de background e reduz a densidade da interface. Ideal para máquinas antigas.
+                    </div>
+                    <div id="gfx-desc-medium" style="display: block;">
+                        <span style="color: var(--green); font-weight: bold;">Modo Balanceado:</span> O padrão do sistema. Efeitos glassmorphism leves, transições de interface ativas e sombras padrão.
+                    </div>
+                    <div id="gfx-desc-ultra" style="display: none;">
+                        <span style="color: var(--accent); font-weight: bold;">Modo Cinemático (Engenheiro):</span> Gráficos no máximo. Ativa Engine Dinâmica de Partículas (Orbs Neon), saturação de blur extrema e CRT Glow intenso no terminal. Exige GPU dedicada.
+                    </div>
                 </div>
             </div>
 
@@ -1249,7 +1570,20 @@
                 <button class="btn btn-green" id="btn-install-update" style="display: none; margin-top: 10px;">Instalar e Reiniciar</button>
             </div>
 
-            <div class="card">
+            <div class="card" style="margin-top: 12px;">
+                <div class="card-label">Experiência</div>
+                <div class="card-title">Simulador iPhone 3D</div>
+                <div class="card-desc">Transforma a interface do projeto em um iPhone 3D interativo na tela.</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding: 8px 0;">
+                    <span style="font-size: 12px; font-weight: 500; color: var(--text-1);">Modo iPhone 3D</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-iphone-3d">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 12px;">
                 <div class="card-label">Layout</div>
                 <div class="card-title">Organização de Menus</div>
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-1);">
@@ -1521,6 +1855,29 @@
         </div>
     </div>
 
+    </div>
+
+    <!-- Kill Switch Fake Screen -->
+    <div id="view-panic" style="display: none; position: fixed; inset: 0; background: #ffffff; z-index: 999999999; color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <!-- Fake Notepad Menu Bar -->
+        <div style="border-bottom: 1px solid #d9d9d9; padding: 4px 10px; font-size: 12px; display: flex; gap: 15px; background: #f0f0f0;">
+            <span style="cursor: default;">Arquivo</span>
+            <span style="cursor: default;">Editar</span>
+            <span style="cursor: default;">Formatar</span>
+            <span style="cursor: default;">Exibir</span>
+            <span style="cursor: default;">Ajuda</span>
+        </div>
+        <!-- Fake Content -->
+        <div style="padding: 10px; font-size: 14px; font-family: 'Consolas', 'Courier New', monospace; outline: none; height: calc(100vh - 30px);" contenteditable="true" spellcheck="false">
+            Reunião de Alinhamento - Q3
+            <br><br>
+            Pautas:
+            <br>- Revisão de Metas
+            <br>- Orçamento de Marketing
+            <br>- Contratações Pendentes
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="node_modules/xterm/lib/xterm.js"></script>
@@ -1530,6 +1887,60 @@
     <script src="radar.js"></script>
     <script src="ai.js"></script>
     <script src="weather.js"></script>
+    <!-- Sci-Fi Audio Engine -->
+    <script src="assets/audio.js"></script>
     <script src="renderer.js"></script>
+    <script>
+        // iPhone 3D Mode Toggle & Parallax
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleIphone3d = document.getElementById('toggle-iphone-3d');
+            const app = document.querySelector('.app');
+            let baseScale = 0.6;
+
+            function updateScale() {
+                if (document.body.classList.contains('iphone-3d-mode')) {
+                    // With a 320x700 window, a 430x932 app scaled at 0.6 fits nicely
+                    // with room for the heavy drop shadows.
+                    baseScale = 0.6;
+                    app.style.transform = `scale(${baseScale})`;
+                } else {
+                    app.style.transform = 'none';
+                }
+            }
+
+            if (toggleIphone3d) {
+                toggleIphone3d.addEventListener('change', (e) => {
+                    const isEnabled = e.target.checked;
+                    if (isEnabled) {
+                        document.body.classList.add('iphone-3d-mode');
+                        if (window.electronAPI && window.electronAPI.toggleIphoneMode) {
+                            window.electronAPI.toggleIphoneMode(true);
+                        }
+                    } else {
+                        document.body.classList.remove('iphone-3d-mode');
+                        if (window.electronAPI && window.electronAPI.toggleIphoneMode) {
+                            window.electronAPI.toggleIphoneMode(false);
+                        }
+                    }
+                    setTimeout(updateScale, 50); // slight delay to allow window resize
+                });
+            }
+
+            // Interactive 3D Hover
+            document.addEventListener('mousemove', (e) => {
+                if (document.body.classList.contains('iphone-3d-mode')) {
+                    const xAxis = (window.innerWidth / 2 - e.pageX) / 60;
+                    const yAxis = (window.innerHeight / 2 - e.pageY) / 60;
+                    app.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg) scale(${baseScale})`;
+                }
+            });
+
+            document.addEventListener('mouseleave', () => {
+                if (document.body.classList.contains('iphone-3d-mode')) {
+                    app.style.transform = `rotateY(0deg) rotateX(0deg) scale(${baseScale})`;
+                }
+            });
+        });
+    </script>
 </body>
 </html>

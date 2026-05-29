@@ -200,7 +200,7 @@ class WeatherApp {
 window.weatherApp = new WeatherApp();
 
 // Bind to tab switch
-document.addEventListener('DOMContentLoaded', () => {
+setTimeout(() => {
     // Wait for the renderer to bind the tabs first, then we can hook into it
     setTimeout(() => {
         const segBtns = document.querySelectorAll('.seg-btn[data-target]');
@@ -212,4 +212,4 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }, 500);
-});
+}, 100);

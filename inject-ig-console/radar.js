@@ -248,6 +248,6 @@ class RadarApp {
 }
 
 // Inicializar globalmente
-document.addEventListener('DOMContentLoaded', () => {
+setTimeout(() => {
     window.radarApp = new RadarApp();
-});
+}, 100);

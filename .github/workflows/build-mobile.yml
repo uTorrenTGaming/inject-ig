@@ -1,0 +1,80 @@
+name: Compilar Mobile (Nuvem)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install and Build Web
+        run: |
+          cd inject-ig-admin
+          npm install
+          npm run build
+          npx cap sync android
+
+      - name: Setup Java (for Android)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Build APK with Gradle
+        run: |
+          cd inject-ig-admin/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: inject-admin-apk
+          path: inject-ig-admin/android/app/build/outputs/apk/debug/app-debug.apk
+
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install and Build Web
+        run: |
+          cd inject-ig-admin
+          npm install
+          npm run build
+          npx cap sync ios
+
+      - name: Build IPA with Xcode
+        run: |
+          cd inject-ig-admin/ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphoneos build CODE_SIGNING_ALLOWED=NO -derivedDataPath build
+          # Create fake unsigned IPA for testing
+          mkdir -p build/Payload
+          cp -r build/Build/Products/Debug-iphoneos/App.app build/Payload/
+          cd build
+          zip -r App-Unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: inject-admin-ipa
+          path: inject-ig-admin/ios/App/build/App-Unsigned.ipa

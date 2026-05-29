@@ -141,7 +141,6 @@ class DatabaseManager {
 
   async hasValidLicense(hwid) {
     try {
-      if (!this.client) await this.connect();
       const { data, error } = await this.client
         .from('licenses')
         .select('*')
@@ -197,6 +196,19 @@ class DatabaseManager {
   async activateLicense(key, hwid) {
     try {
       if (!this.client) await this.connect();
+      
+      // DEV BACKDOOR PARA O IGOR
+      if (key === 'IGOR-DEV-MASTER') {
+          const fakeKey = 'IG-DEV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+          await this.client.from('licenses').insert([{
+              key: fakeKey,
+              hwid_vinculado: hwid,
+              is_active: true,
+              activated_at: new Date().toISOString()
+          }]);
+          return { success: true, message: 'Licença DEV gerada e vinculada com sucesso!' };
+      }
+
       // 1. Busca a licença pela chave
       const { data: license, error: fetchError } = await this.client
         .from('licenses')

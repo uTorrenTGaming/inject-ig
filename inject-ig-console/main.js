@@ -1,10 +1,12 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut } = require('electron');
 const fs = require('fs');
 const os = require('os');
-const { exec, spawn } = require('child_process');
+const { exec, spawn, execSync } = require('child_process');
 const http = require('http');
+const https = require('https');
+const AdmZip = require('adm-zip');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const db = require('./src/db');
@@ -170,6 +172,32 @@ function findJavaBinary() {
 
 // ═════ PYTHON BINARY FINDER ═════
 function findPythonBinary() {
+    const isWin = process.platform === 'win32';
+    const pyBinName = isWin ? 'python.exe' : 'bin/python3';
+
+    // 1. PRIORIDADE 1 - Python Bundled
+    if (isPackaged) {
+        const bundledPython = path.join(process.resourcesPath, 'python', pyBinName);
+        if (fs.existsSync(bundledPython)) {
+            log.info(`[backend] Usando Python bundled: ${bundledPython}`);
+            return bundledPython;
+        }
+    } else {
+        // Dev Mode Python
+        let devPython = '';
+        if (process.platform === 'darwin') {
+            devPython = path.join(__dirname, 'python', 'mac', 'python', pyBinName);
+        } else if (process.platform === 'win32') {
+            devPython = path.join(__dirname, 'python', 'win', 'python', pyBinName);
+        } else {
+            devPython = path.join(__dirname, 'python', 'linux', 'python', pyBinName);
+        }
+        if (fs.existsSync(devPython)) {
+            log.info(`[backend] Usando Python local (dev): ${devPython}`);
+            return devPython;
+        }
+    }
+
     // No Windows, o executável é 'python' (sem o 3) por padrão
     if (process.platform === 'win32') {
         // Verifica se python3.exe existe primeiro
@@ -223,10 +251,11 @@ function sendSplashProgress(step, progress, message) {
 // ═════ MAIN APP WINDOW ═════
 function createMainWindow() {
     mainWindow = new BrowserWindow({
-        width: 450,
-        height: 600,
+        width: 1000,
+        height: 700,
         show: false, // Oculto até o splash terminar
-        backgroundColor: '#07080d',
+        backgroundColor: '#00000000',
+        transparent: true,
         titleBarStyle: 'hiddenInset',
         alwaysOnTop: false,
         resizable: true,
@@ -238,6 +267,16 @@ function createMainWindow() {
     });
 
     mainWindow.loadFile('index.html');
+    
+    // Loga erros do renderer no console principal (silencioso na UI)
+    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        const prefix = level === 3 ? '[RENDERER ERROR]' : level === 2 ? '[RENDERER WARN]' : '[RENDERER LOG]';
+        console.log(`${prefix} L${line}: ${message}`);
+    });
+    
+    mainWindow.webContents.on('render-process-gone', (event, details) => {
+        console.error('[RENDERER CRASHED]', details);
+    });
 }
 
 // ═════ IPC HANDLERS (registrados uma única vez) ═════
@@ -259,20 +298,36 @@ function setupIpcHandlers() {
             if (userCheck && userCheck.is_banned) {
                 return { success: false, banned: true, message: 'Seu computador foi banido.' };
             }
+            
             const hasLicense = await db.hasValidLicense(hwid);
+            
+            // Auto-login check (username is null)
+            if (!username) {
+                if (userCheck) {
+                    // Pull user visually, we will block them later if !hasLicense
+                    return { success: true, user: userCheck, requireLicense: !hasLicense };
+                }
+                return { success: false, requireRegistration: true };
+            }
+
+            // User clicked "Acessar Sistema"
             if (!hasLicense) {
                 return { success: false, requireLicense: true };
             }
+
             const os_type = process.platform;
             if (username) {
                 const user = await db.registerOrUpdateUser(hwid, username, avatar_url, os_type);
                 return { success: true, user };
             }
+            
             if (userCheck) {
                 return { success: true, user: userCheck };
             }
-            return { success: false, needsRegistration: true };
+            
+            return { success: false, requireRegistration: true };
         } catch (e) {
+            log.error('Erro de autenticação:', e);
             return { success: false, message: e.message };
         }
     });
@@ -423,6 +478,23 @@ function setupIpcHandlers() {
             else mainWindow.maximize();
         }
     });
+    
+    // iPhone 3D Window Resizer
+    let lastWindowBounds = { width: 1000, height: 700 };
+    ipcMain.on('window.toggle-iphone-mode', (event, enable) => {
+        if (!mainWindow) return;
+        if (enable) {
+            lastWindowBounds = mainWindow.getBounds();
+            // iPhone 17 Pro Max dimensions + margins for shadow (e.g. 320x700 total window)
+            mainWindow.setMinimumSize(320, 700);
+            mainWindow.setSize(320, 700, true);
+            mainWindow.setAlwaysOnTop(true, 'floating');
+        } else {
+            mainWindow.setAlwaysOnTop(false);
+            mainWindow.setMinimumSize(450, 600);
+            mainWindow.setBounds(lastWindowBounds, true);
+        }
+    });
 
     // ── Terminal ──
     ipcMain.on('terminal.keystroke', (event, command) => {
@@ -489,70 +561,82 @@ function setupIpcHandlers() {
         } catch (e) { return { success: false, message: 'Erro: ' + e.message }; }
     });
 
+    function getAdbPath() {
+        const p = process.platform;
+        const adbExe = p === 'win32' ? 'adb.exe' : 'adb';
+        const isDev = !app.isPackaged;
+        const adbFolder = isDev ? path.join(__dirname, 'adb', p === 'win32' ? 'win' : p === 'darwin' ? 'mac' : 'linux') 
+                                : path.join(process.resourcesPath, 'adb');
+        return path.join(adbFolder, adbExe);
+    }
+
     ipcMain.handle('c2.getMobileDevices', async () => {
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) => {
             let devices = [];
-            let done = 0;
-            const finish = () => { if (++done >= 2) resolve(devices.length ? { success: true, devices } : { success: false, message: 'Nenhum dispositivo detectado.', devices: [] }); };
-            exec('adb devices', { env: { ...process.env, PATH: ENV_PATH } }, (err, stdout) => {
-                if (!err && stdout) {
+            const adb = getAdbPath();
+            
+            // 1. Android devices via bundled ADB
+            try {
+                if (fs.existsSync(adb)) {
+                    const stdout = execSync(`"${adb}" devices`).toString();
                     stdout.split('\n').slice(1).map(l => l.trim()).filter(l => l).forEach(line => {
                         const [id, status] = line.split('\t');
                         if (id && status) devices.push({ id, status, platform: 'android', name: `Android (${id})` });
                     });
                 }
-                finish();
+            } catch(e) { console.error('ADB error', e); }
+
+            // 2. iOS devices via appium-ios-device
+            try {
+                const { utilities } = require('appium-ios-device');
+                const iosDevices = await utilities.getConnectedDevices();
+                for (const id of iosDevices) {
+                    devices.push({ id, status: 'online', platform: 'ios', name: `iPhone/iPad (${id.substring(0,8)})` });
+                }
+            } catch(e) { console.error('appium-ios-device error', e); }
+            
+            resolve({ success: true, devices });
+        });
+    });
+
+    let activeSyslogProcess = null;
+    let activeIosSyslog = null;
+
+    ipcMain.handle('mobile.startSyslog', async (event, deviceId, platform) => {
+        if (activeSyslogProcess) { activeSyslogProcess.kill(); activeSyslogProcess = null; }
+        if (activeIosSyslog) { activeIosSyslog.close(); activeIosSyslog = null; }
+
+        if (platform === 'android') {
+            const adb = getAdbPath();
+            execSync(`"${adb}" -s ${deviceId} logcat -c`).toString(); // Clear previous logs
+            activeSyslogProcess = spawn(adb, ['-s', deviceId, 'logcat', '-v', 'time']);
+            
+            activeSyslogProcess.stdout.on('data', d => {
+                if(mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('mobile.syslogData', d.toString());
             });
-            if (process.platform === 'darwin') {
-                exec('system_profiler SPUSBDataType', (err, stdout) => {
-                    if (!err && stdout) {
-                        const blocks = stdout.split(/(?=\n\s*(?:iPhone|iPad):)/);
-                        for (const block of blocks) {
-                            const typeMatch = block.match(/^\s*(iPhone|iPad):/);
-                            const serialMatch = block.match(/Serial Number:\s*([A-Za-z0-9]+)/);
-                            if (typeMatch && serialMatch) {
-                                let id = serialMatch[1];
-                                if (id.length === 24) id = id.substring(0, 8) + '-' + id.substring(8);
-                                devices.push({ id, status: 'online', platform: 'ios', name: typeMatch[1] + ' (USB)' });
-                            }
-                        }
-                    }
-                    finish();
+            activeSyslogProcess.stderr.on('data', d => {
+                if(mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('mobile.syslogData', d.toString());
+            });
+            return { success: true };
+        } else if (platform === 'ios') {
+            try {
+                const { services } = require('appium-ios-device');
+                activeIosSyslog = await services.startSyslogService(deviceId);
+                activeIosSyslog.start((logLine) => {
+                    if(mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('mobile.syslogData', logLine + '\n');
                 });
-            } else { finish(); }
-        });
+                return { success: true };
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        }
+        return { success: false, message: 'Platform desconhecida' };
     });
 
-    ipcMain.handle('c2.buildAndDeployMobile', async (event, folderPath, deviceId, platform) => {
-        if (!folderPath) return { success: false, message: 'Selecione o Projeto Alvo na aba Injeção primeiro.' };
-        if (!deviceId) return { success: false, message: 'Nenhum dispositivo USB selecionado.' };
-        if (!platform) platform = 'android';
-        if (platform === 'ios' && process.platform !== 'darwin') return { success: false, message: 'Compilação iOS só em Mac.' };
-        return new Promise((resolve) => {
-            const capInit = `if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then npm init -y && npm install @capacitor/core @capacitor/cli && npx --yes cap init "App Inject" "com.inject.app" --web-dir .; fi`;
-            let script = platform === 'android'
-                ? `cd "${folderPath}" && ${capInit} && npx --yes cap add android && npx --yes cap sync android && npx --yes cap run android --target ${deviceId}`
-                : `cd "${folderPath}" && ${capInit} && npx --yes cap add ios && npx --yes cap sync ios && npx --yes cap run ios --target ${deviceId}`;
-            const child = exec(script, { env: { ...process.env, PATH: ENV_PATH } });
-            child.stdout.on('data', d => mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.send('terminal.incData', '\x1b[35m[MOBILE]\x1b[0m ' + d.toString().replace(/\n/g, '\r\n')));
-            child.stderr.on('data', d => mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.send('terminal.incData', '\x1b[31m[MOBILE ERRO]\x1b[0m ' + d.toString().replace(/\n/g, '\r\n')));
-            child.on('close', code => resolve(code === 0
-                ? { success: true, message: `Sucesso! App injetado via USB → ${platform.toUpperCase()} ${deviceId}` }
-                : { success: false, message: `Falha no Build (Exit: ${code})` }));
-        });
-    });
-
-    ipcMain.handle('c2.deploySelfAgent', async (event, deviceId) => {
-        if (!deviceId) return { success: false, message: 'Nenhum dispositivo selecionado.' };
-        if (process.platform !== 'darwin') return { success: false, message: 'Sideload iOS só em Mac.' };
-        return new Promise((resolve) => {
-            const child = exec(`npx cap sync ios && npx cap run ios --target ${deviceId}`, { cwd: __dirname });
-            child.stdout.on('data', d => mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.send('terminal.incData', '\x1b[36m[AGENT]\x1b[0m ' + d.toString().replace(/\n/g, '\r\n')));
-            child.stderr.on('data', d => mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.send('terminal.incData', '\x1b[31m[AGENT ERRO]\x1b[0m ' + d.toString().replace(/\n/g, '\r\n')));
-            child.on('close', code => resolve(code === 0
-                ? { success: true, message: `Agente instalado no iPhone ${deviceId}! (Validade 7 dias)` }
-                : { success: false, message: `Falha ao instalar o Agente (Exit: ${code})` }));
-        });
+    ipcMain.handle('mobile.stopSyslog', async () => {
+        if (activeSyslogProcess) { activeSyslogProcess.kill(); activeSyslogProcess = null; }
+        if (activeIosSyslog) { activeIosSyslog.close(); activeIosSyslog = null; }
+        return { success: true };
     });
 
     ipcMain.handle('c2.saveReport', async (event, data) => {
@@ -562,6 +646,127 @@ function setupIpcHandlers() {
         });
         if (filePath) { fs.writeFileSync(filePath, data); return { success: true, message: 'Salvo em: ' + filePath }; }
         return { success: false, message: 'Cancelado' };
+    });
+
+    // ═════ RUN TOOL IPC ═════
+    ipcMain.handle('system.runTool', async (event, toolId, target) => {
+        return new Promise((resolve) => {
+            const sendLog = (msg) => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('terminal.incData', msg.replace(/\n/g, '\r\n'));
+                }
+            };
+            
+            sendLog(`\\x1b[36m[SYSTEM]\\x1b[0m Iniciando motor para: ${toolId}...\\r\\n`);
+            
+            // Map toolId to actual scripts
+            let scriptPath = '';
+            let isPython = false;
+            
+            if (toolId === 'nmap_portscan') {
+                scriptPath = path.join(__dirname, 'tools', 'network', 'nmap_portscan.py');
+                isPython = true;
+            } else if (toolId === 'lfi_fuzzer' || toolId === 'sec_lfi') {
+                scriptPath = path.join(__dirname, 'tools', 'exploits', 'lfi_fuzzer.py');
+                isPython = true;
+            } else if (toolId === 'data_b64') {
+                scriptPath = path.join(__dirname, 'tools', 'utils', 'base64_codec.js');
+                isPython = false;
+            } else {
+                scriptPath = path.join(__dirname, 'tools', 'universal_tool.py');
+                isPython = true;
+            }
+
+            if (!fs.existsSync(scriptPath)) {
+                sendLog(`\\x1b[31m[ERRO]\\x1b[0m Script não encontrado: ${scriptPath}\\r\\n`);
+                return resolve({ success: false, message: 'Script not found' });
+            }
+
+            let cmd, args;
+            if (isPython) {
+                cmd = findPythonBinary();
+                args = [scriptPath, toolId, target];
+            } else {
+                cmd = 'node'; 
+                args = [scriptPath, toolId, target];
+            }
+
+            sendLog(`\\x1b[90m[EXEC]\\x1b[0m ${cmd} ${scriptPath} ${toolId} ${target}\\r\\n`);
+
+            const child = spawn(cmd, args, { env: { ...process.env, PATH: ENV_PATH } });
+            
+            let fullLog = '';
+
+            child.stdout.on('data', (data) => {
+                const str = data.toString();
+                fullLog += str;
+                sendLog(str);
+            });
+
+            child.stderr.on('data', (data) => {
+                const str = data.toString();
+                fullLog += str;
+                sendLog(`\\x1b[31m${str}\\x1b[0m`);
+            });
+
+            child.on('close', (code) => {
+                sendLog(`\\n\\x1b[32m[SYSTEM]\\x1b[0m Processo finalizado (Exit: ${code}).\\r\\n`);
+                if (!fullLog) fullLog = 'Processo finalizado sem saída (Exit: ' + code + ')';
+                resolve({ success: code === 0, code, message: fullLog });
+            });
+            
+            child.on('error', (err) => {
+                sendLog(`\\x1b[31m[FALHA FATAL]\\x1b[0m ${err.message}\\r\\n`);
+                resolve({ success: false, message: err.message, error: err.message });
+            });
+        });
+    });
+
+    ipcMain.handle('system.exportReportPDF', async (event, dataObj) => {
+        const { filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Exportar PDF', defaultPath: 'IG_Report.pdf',
+            filters: [{ name: 'PDF', extensions: ['pdf'] }]
+        });
+        if (!filePath) return { success: false, message: 'Cancelado' };
+        
+        return new Promise((resolve) => {
+            try {
+                let templateContent = fs.readFileSync(path.join(__dirname, 'report_template.html'), 'utf8');
+                
+                // Inject data
+                templateContent = templateContent.replace('{{TARGET_URL}}', dataObj.url);
+                templateContent = templateContent.replace('{{DATE}}', dataObj.date);
+                templateContent = templateContent.replace('{{MODULE_NAME}}', dataObj.moduleName);
+                templateContent = templateContent.replace('{{STATUS}}', dataObj.status);
+                templateContent = templateContent.replace('{{RISK_GRADE}}', dataObj.riskGrade);
+                templateContent = templateContent.replace('{{RISK_CLASS}}', dataObj.riskClass);
+                templateContent = templateContent.replace('{{RAW_LOG}}', dataObj.rawLog);
+
+                const printWin = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false } });
+                const tempHtmlPath = path.join(os.tmpdir(), `ig_report_${Date.now()}.html`);
+                fs.writeFileSync(tempHtmlPath, templateContent, 'utf8');
+                
+                printWin.loadFile(tempHtmlPath);
+                printWin.webContents.on('did-finish-load', async () => {
+                    try {
+                        const pdfData = await printWin.webContents.printToPDF({
+                            printBackground: true,
+                            pageSize: 'A4',
+                            margins: { marginType: 'default' }
+                        });
+                        fs.writeFileSync(filePath, pdfData);
+                        resolve({ success: true, message: 'PDF Exportado: ' + filePath });
+                    } catch (e) {
+                        resolve({ success: false, message: 'Erro: ' + e.message });
+                    } finally {
+                        try { fs.unlinkSync(tempHtmlPath); } catch (e) {}
+                        printWin.close();
+                    }
+                });
+            } catch (err) {
+                resolve({ success: false, message: 'Erro interno: ' + err.message });
+            }
+        });
     });
 
     ipcMain.handle('c2.getLocalIp', async () => {
@@ -660,50 +865,62 @@ function setupIpcHandlers() {
     });
 
     // ── USB Screen Capture ──
-    let usbCaptureProcess = null;
-    ipcMain.handle('system.startUSBCapture', () => new Promise((resolve) => {
-        if (usbCaptureProcess) { usbCaptureProcess.kill(); usbCaptureProcess = null; }
-        const scriptPath = isPackaged
-            ? path.join(process.resourcesPath, 'engine', 'usb_capture.py')
-            : path.join(__dirname, 'engine', 'usb_capture.py');
-        const tmpFile = path.join(os.tmpdir(), 'inject_ig_screen.png');
-        const pythonBin = findPythonBinary();
-        usbCaptureProcess = spawn(pythonBin, [scriptPath], { env: { ...process.env, PATH: ENV_PATH }, windowsHide: true });
-        let resolved = false;
-        usbCaptureProcess.stdout.on('data', (data) => {
-            for (const line of data.toString().split('\n')) {
-                const t = line.trim();
-                if (t === 'FRAME') {
-                    if (!resolved) { resolved = true; resolve({ success: true }); }
+    let usbCaptureInterval = null;
+    ipcMain.handle('system.startUSBCapture', async (event, platformStr, deviceId) => {
+        if (usbCaptureInterval) { clearInterval(usbCaptureInterval); usbCaptureInterval = null; }
+        
+        return new Promise((resolve) => {
+            const tmpFile = path.join(os.tmpdir(), 'inject_ig_screen.png');
+            let resolved = false;
+
+            if (platformStr === 'android') {
+                const adb = getAdbPath();
+                if (mainWindow && !mainWindow.isDestroyed())
+                    mainWindow.webContents.send('terminal.incData', `\\x1b[32m[usb]\\x1b[0m Iniciando ADB Mirror (Android)...\\r\\n`);
+                
+                usbCaptureInterval = setInterval(() => {
                     try {
-                        const buf = fs.readFileSync(tmpFile);
-                        if (mainWindow && !mainWindow.isDestroyed())
-                            mainWindow.webContents.send('spectre.usbFrame', 'data:image/png;base64,' + buf.toString('base64'));
-                    } catch (e) {}
-                } else if (t.startsWith('INFO: Conectado')) {
-                    if (mainWindow && !mainWindow.isDestroyed())
-                        mainWindow.webContents.send('terminal.incData', `\x1b[32m[usb]\x1b[0m ${t}\r\n`);
-                } else if (t.startsWith('ERROR:') && !resolved) {
-                    resolved = true;
-                    resolve({ success: false, message: t.replace('ERROR:', '').trim() });
+                        execSync(`"${adb}" -s ${deviceId} exec-out screencap -p > "${tmpFile}"`);
+                        if (fs.existsSync(tmpFile)) {
+                            if (!resolved) { resolved = true; resolve({ success: true }); }
+                            const buf = fs.readFileSync(tmpFile);
+                            if (mainWindow && !mainWindow.isDestroyed())
+                                mainWindow.webContents.send('spectre.usbFrame', 'data:image/png;base64,' + buf.toString('base64'));
+                        }
+                    } catch (e) {
+                        if (!resolved) { resolved = true; resolve({ success: false, message: 'Falha no ADB: ' + e.message }); }
+                    }
+                }, 500); // 2 FPS for stability over USB
+            } else if (platformStr === 'ios') {
+                const goIosBin = path.join(app.getPath('userData'), '.ig_tools', process.platform === 'win32' ? 'ios.exe' : 'ios');
+                if (!fs.existsSync(goIosBin)) {
+                    return resolve({ success: false, message: 'go-ios não encontrado. Reinicie o aplicativo.' });
                 }
+                if (mainWindow && !mainWindow.isDestroyed())
+                    mainWindow.webContents.send('terminal.incData', `\\x1b[32m[usb]\\x1b[0m Iniciando go-ios Mirror (iOS)...\\r\\n`);
+                
+                usbCaptureInterval = setInterval(() => {
+                    try {
+                        // go-ios takes screenshot and saves to file
+                        execSync(`"${goIosBin}" screenshot --udid=${deviceId} --output="${tmpFile}"`, { stdio: 'ignore' });
+                        if (fs.existsSync(tmpFile)) {
+                            if (!resolved) { resolved = true; resolve({ success: true }); }
+                            const buf = fs.readFileSync(tmpFile);
+                            if (mainWindow && !mainWindow.isDestroyed())
+                                mainWindow.webContents.send('spectre.usbFrame', 'data:image/png;base64,' + buf.toString('base64'));
+                        }
+                    } catch (e) {
+                        if (!resolved) { resolved = true; resolve({ success: false, message: 'O iOS bloqueia capturas nativas sem túnel ativo (Comum no iOS 17+). Use um dispositivo Android para espelhamento USB.' }); }
+                    }
+                }, 1000); // 1 FPS for iOS as DeveloperDiskImage screenshot is slower
+            } else {
+                resolve({ success: false, message: 'Selecione um dispositivo válido primeiro.' });
             }
         });
-        usbCaptureProcess.stderr.on('data', (data) => {
-            const msg = data.toString().trim();
-            if (msg && !msg.includes('WARNING') && mainWindow && !mainWindow.isDestroyed())
-                mainWindow.webContents.send('terminal.incData', `\x1b[33m[usb] ${msg}\x1b[0m\r\n`);
-        });
-        usbCaptureProcess.on('close', (code) => {
-            if (!resolved) { resolved = true; resolve({ success: false, message: `Processo encerrado (${code}). iPhone desbloqueado?` }); }
-        });
-        setTimeout(() => {
-            if (!resolved) { resolved = true; resolve({ success: false, message: 'Timeout 25s. Verifique cabo USB.' }); }
-        }, 25000);
-    }));
+    });
 
     ipcMain.handle('system.stopUSBCapture', () => {
-        if (usbCaptureProcess) { usbCaptureProcess.kill(); usbCaptureProcess = null; }
+        if (usbCaptureInterval) { clearInterval(usbCaptureInterval); usbCaptureInterval = null; }
         return { success: true };
     });
 
@@ -750,6 +967,60 @@ function setupIpcHandlers() {
                 } else {
                     resolve({ success: false, message: `Falha na conversão via Python (Exit: ${code}).` });
                 }
+            });
+        });
+    });
+
+    // ── Local Exploits & Tools Engine ──
+    ipcMain.handle('system.executeLocalScript', async (event, type, id, targetUrl, payloadData) => {
+        return new Promise((resolve) => {
+            if (!targetUrl) {
+                return resolve({ success: false, message: 'URL Alvo não fornecida.' });
+            }
+            
+            // type pode ser 'exploits' ou 'tools'
+            const dirName = type === 'exploits' ? 'exploits' : 'tools';
+            let scriptName = id + '.py';
+            
+            let scriptPath = isPackaged 
+                ? path.join(process.resourcesPath, dirName, scriptName) 
+                : path.join(__dirname, dirName, scriptName);
+                
+            if (!fs.existsSync(scriptPath)) {
+                // FALLBACK genérico
+                const fallbackName = type === 'exploits' ? 'generic_exploit.py' : 'generic_tool.py';
+                scriptPath = isPackaged 
+                    ? path.join(process.resourcesPath, dirName, fallbackName) 
+                    : path.join(__dirname, dirName, fallbackName);
+                    
+                if (!fs.existsSync(scriptPath)) {
+                    return resolve({ 
+                        success: false, 
+                        message: `Arquivo não encontrado.\nCaminho buscado: ${scriptPath}` 
+                    });
+                }
+            }
+            
+            const pyBin = findPythonBinary();
+            const child = exec(`"${pyBin}" "${scriptPath}" "${targetUrl}" "${payloadData || ''}"`, { env: { ...process.env, PATH: ENV_PATH } });
+            
+            let output = '';
+            let isError = false;
+            
+            child.stdout.on('data', (data) => {
+                output += data.toString();
+            });
+            
+            child.stderr.on('data', (data) => {
+                output += data.toString();
+                isError = true;
+            });
+            
+            child.on('close', (code) => {
+                resolve({ 
+                    success: code === 0, 
+                    message: output || (code === 0 ? 'Concluído sem saída de log.' : 'Falha na execução.')
+                });
             });
         });
     });
@@ -928,6 +1199,51 @@ function startBackend(callback) {
     setTimeout(() => doneCallback(null), 2000);
 }
 
+// ═════ AUTO INSTALLER ═════
+async function installDependencies() {
+    const toolsDir = path.join(app.getPath('userData'), '.ig_tools');
+    if (!fs.existsSync(toolsDir)) fs.mkdirSync(toolsDir, { recursive: true });
+
+    const iosBinName = process.platform === 'win32' ? 'ios.exe' : 'ios';
+    const goIosBin = path.join(toolsDir, iosBinName);
+    if (!fs.existsSync(goIosBin)) {
+        sendSplashProgress(3, 85, 'Baixando ferramentas iOS (go-ios)...');
+        let zipUrl = '';
+        if (process.platform === 'win32') zipUrl = 'https://github.com/danielpaulus/go-ios/releases/download/v1.0.213/go-ios-win.zip';
+        else if (process.platform === 'darwin') zipUrl = 'https://github.com/danielpaulus/go-ios/releases/download/v1.0.213/go-ios-mac.zip';
+        else zipUrl = 'https://github.com/danielpaulus/go-ios/releases/download/v1.0.213/go-ios-linux.zip';
+        
+        const zipPath = path.join(toolsDir, 'go-ios.zip');
+        await new Promise((resolve, reject) => {
+            const req = https.get(zipUrl, (res) => {
+                if (res.statusCode === 301 || res.statusCode === 302) {
+                    https.get(res.headers.location, (res2) => {
+                        const file = fs.createWriteStream(zipPath);
+                        res2.pipe(file);
+                        file.on('finish', () => { file.close(); resolve(); });
+                    }).on('error', reject);
+                } else {
+                    const file = fs.createWriteStream(zipPath);
+                    res.pipe(file);
+                    file.on('finish', () => { file.close(); resolve(); });
+                }
+            }).on('error', reject);
+        });
+        
+        sendSplashProgress(3, 90, 'Instalando ferramentas iOS...');
+        try {
+            const zip = new AdmZip(zipPath);
+            zip.extractAllTo(toolsDir, true);
+            if (process.platform !== 'win32') {
+                fs.chmodSync(goIosBin, 0o755);
+            }
+            fs.unlinkSync(zipPath);
+        } catch(e) {
+            console.error('Erro ao extrair go-ios:', e);
+        }
+    }
+}
+
 // ═════ LAUNCH SEQUENCE ═════
 async function launch() {
     // 1. Abre a splash (única janela visível durante o carregamento)
@@ -969,6 +1285,8 @@ async function launch() {
         }
     });
 
+    await installDependencies();
+
     try {
         await new Promise((resolve, reject) => {
             // Increase timeout to 90 seconds (90 attempts of 1000ms) because Spring Boot
@@ -996,6 +1314,14 @@ async function launch() {
 app.whenReady().then(() => {
     setupIpcHandlers(); // Registra handlers UMA VEZ antes de tudo
     launch();
+
+    globalShortcut.register('CommandOrControl+Shift+Space', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('system.togglePanic');
+            mainWindow.show();
+            mainWindow.focus();
+        }
+    });
 });
 
 app.on('window-all-closed', () => {
@@ -1015,4 +1341,8 @@ app.on('before-quit', () => {
     if (backendProcess) {
         try { backendProcess.kill('SIGTERM'); } catch (e) {}
     }
+});
+
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
 });

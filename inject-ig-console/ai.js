@@ -230,6 +230,6 @@ class GhostAIAssistant {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+setTimeout(() => {
     window.ghostAI = new GhostAIAssistant();
-});
+}, 100);

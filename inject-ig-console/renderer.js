@@ -10,6 +10,25 @@ if (!AbortSignal.timeout) {
 }
 
 // ═══════════ Terminal Initialization ═══════════
+// ── Global Sound Effects ──
+document.addEventListener('mouseover', (e) => {
+    if (e.target.closest('button') || e.target.closest('.seg-btn') || e.target.closest('.card')) {
+        if (window.SoundEngine) window.SoundEngine.play('hover');
+    }
+});
+
+document.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button') || e.target.closest('.seg-btn') || e.target.closest('.item')) {
+        if (window.SoundEngine) window.SoundEngine.play('click');
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (window.SoundEngine) window.SoundEngine.play('keystroke');
+    }
+});
+
 const term = new window.Terminal({
     cursorBlink: true,
     cursorStyle: 'bar',
@@ -42,11 +61,15 @@ term.loadAddon(fitAddon);
 term.open(document.getElementById('terminal-container'));
 fitAddon.fit();
 
+term.prompt = () => {
+    term.write('\r\n\x1b[32mnexus\x1b[0m@\x1b[34mcore\x1b[0m:~$ ');
+};
+
 let commandBuffer = '';
 let currentVaultData = {};
 
 // ═══════════ Audio UX Engine ═══════════
-const AudioEngine = {
+const RendererAudioEngine = {
     ctx: null,
     init() {
         if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -82,8 +105,8 @@ const AudioEngine = {
 };
 
 document.body.addEventListener('click', () => {
-    AudioEngine.init();
-    AudioEngine.playClick();
+    RendererAudioEngine.init();
+    RendererAudioEngine.playClick();
 });
 
 term.writeln('\x1b[90m───────────────────────\x1b[0m');
@@ -372,7 +395,7 @@ function renderTerminalCommands(filter = '') {
             let finalCmd = c.cmd.replace(/{target}/g, url).replace(/{url}/g, url).replace(/{user}/g, 'admin').replace(/{pass}/g, '123456');
             term.write(finalCmd);
             commandBuffer = finalCmd;
-            AudioEngine.playClick();
+            if (typeof RendererAudioEngine !== 'undefined') RendererAudioEngine.playClick();
         };
         list.appendChild(item);
     });
@@ -674,14 +697,22 @@ let activeToolCalls = 0;
 let activeExploitCalls = 0;
 
 async function runTool(id, name, isExploit = false) {
-    const url = document.getElementById('scan-target').value;
+    let url = '';
+    if (isExploit) {
+        url = document.getElementById('exploit-target')?.value || document.getElementById('scan-target').value;
+    } else {
+        url = document.getElementById('tool-target')?.value || document.getElementById('scan-target').value;
+    }
+    
     if (!url && !id.startsWith('data_')) {
-        alert('Por favor, insira um URL no Cofre antes de usar esta ferramenta.');
+        alert('Por favor, digite o URL Alvo antes de executar esta ferramenta.');
         return;
     }
 
     const toolMeta = isExploit ? EXPLOITS_DATABASE.find(t => t.id === id) : TOOLS_DATABASE.find(t => t.id === id) || { name: id, cat: 'Misc', icon: ICONS.activity };
     term.writeln(`\r\n\x1b[33m[exec]\x1b[0m Iniciando ${isExploit ? 'exploit' : 'ferramenta'}: ${toolMeta.name} em ${url || 'buffer'}`);
+    
+    if (window.SoundEngine) window.SoundEngine.play('scan');
     
     // Switch to results tab automatically
     if (isExploit) {
@@ -727,86 +758,127 @@ async function runTool(id, name, isExploit = false) {
             <span class="tag ${isExploit ? 'tag-red' : 'tag-blue'}" style="animation: critical-pulse 1.5s infinite;">Processando...</span>
         </div>
         <div class="data-well" style="max-height: none; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--border-1);">
-            <span style="color: var(--text-3); font-size: 11px; font-family: var(--mono);">Interceptando dados do Core Engine...</span>
+            <span style="color: var(--text-3); font-size: 11px; font-family: var(--mono);">Executando módulo físico...</span>
         </div>
         <div class="result-actions" style="display: none; margin-top: 15px; border-top: 1px solid var(--border-1); padding-top: 10px;">
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-ghost btn-dl-txt" style="flex: 1;">Baixar TXT</button>
                 <button class="btn btn-ghost btn-dl-json" style="flex: 1;">Baixar JSON</button>
+                <button class="btn btn-primary btn-dl-pdf" style="flex: 1; border-radius: 8px; font-weight: 600;">Relatório PDF</button>
             </div>
         </div>
     `;
-    
+
     // Add to top of the list
     resultsPane.insertBefore(resultCard, resultsPane.firstChild);
 
-    // Call Backend Engine
-    let apiUrl = `${SERVER_URL}/api/inject-ig/tool?id=${encodeURIComponent(id)}&url=${encodeURIComponent(url)}`;
-    
-    if (isExploit) {
-        const customPayload = document.getElementById('exploit-custom-payload')?.value;
-        if (customPayload && customPayload.trim() !== "") {
-            apiUrl += `&customPayload=${encodeURIComponent(customPayload)}`;
-            term.writeln(`\x1b[31m[!] Payload Ativo:\x1b[0m ${customPayload}`);
-        }
-    }
-    
-    fetch(apiUrl)
-        .then(res => res.json())
-        .then(data => {
-            const statusBadge = resultCard.querySelector('.tag');
-            statusBadge.style.animation = 'none';
-            
-            if (data.error) throw new Error(data.error);
+    const statusBadge = resultCard.querySelector('.tag');
 
-            statusBadge.className = 'tag tag-green';
-            statusBadge.innerText = 'Sucesso';
+    // EXECUÇÃO REAL VIA MOTOR UNIFICADO
+    if (window.electronAPI && window.electronAPI.runTool) {
+        const type = isExploit ? 'exploits' : 'tools';
+        let payload = '';
+        if (isExploit) {
+            const customPayload = document.getElementById('exploit-custom-payload')?.value;
+            if (customPayload && customPayload.trim() !== "") {
+                payload = customPayload;
+                term.writeln(`\x1b[31m[!] Payload Ativo:\x1b[0m ${customPayload}`);
+            }
+        }
+
+        try {
+            const res = await window.electronAPI.runTool(id, url);
             
-            term.writeln(`\x1b[32m[ok]\x1b[0m ${toolMeta.name} finalizado.`);
+            statusBadge.className = res.success ? 'tag tag-green' : 'tag tag-red';
+            statusBadge.innerText = res.success ? 'Sucesso' : 'Falhou';
+            
+            if (window.SoundEngine) window.SoundEngine.play(res.success ? 'success' : 'error');
+            
+            term.writeln(res.success ? `\x1b[32m[ok]\x1b[0m ${toolMeta.name} finalizado.` : `\x1b[31m[erro]\x1b[0m Falha ao executar ${toolMeta.name}`);
             term.prompt();
 
             const well = resultCard.querySelector('.data-well');
             well.style.display = 'block';
-            well.style.border = '1px solid var(--border-1)';
+            well.style.border = res.success ? '1px solid var(--border-1)' : '1px dashed var(--red)';
             well.innerHTML = '';
             
-            const renderData = data.result || data.data || data;
-            
-            // Format beautiful JSON
             const pre = document.createElement('pre');
             pre.style.margin = '0';
             pre.style.fontFamily = 'var(--mono)';
             pre.style.fontSize = '10px';
-            pre.style.color = 'var(--text-1)';
+            pre.style.color = res.success ? 'var(--green)' : 'var(--text-1)';
             pre.style.whiteSpace = 'pre-wrap';
             pre.style.wordBreak = 'break-word';
-            pre.innerHTML = syntaxHighlightJSON(JSON.stringify(renderData, null, 2));
+            pre.innerText = res.message;
+            
             well.appendChild(pre);
 
-            // Enable Actions
             const actions = resultCard.querySelector('.result-actions');
             actions.style.display = 'block';
-            
             actions.querySelector('.btn-dl-txt').onclick = () => {
-                downloadData(`${toolMeta.name.replace(/\s+/g, '_')}_${Date.now()}.txt`, JSON.stringify(renderData, null, 2));
+                downloadData(`${toolMeta.name.replace(/\s+/g, '_')}_${Date.now()}.txt`, pre.innerText);
             };
-            actions.querySelector('.btn-dl-json').onclick = () => {
-                downloadData(`${toolMeta.name.replace(/\s+/g, '_')}_${Date.now()}.json`, JSON.stringify(data, null, 2));
+            actions.querySelector('.btn-dl-pdf').onclick = async () => {
+                if (!window.electronAPI || !window.electronAPI.exportReportPDF) {
+                    alert('Exportação PDF não está disponível no preload.js.');
+                    return;
+                }
+                
+                try {
+                    const btn = actions.querySelector('.btn-dl-pdf');
+                    const oldText = btn.innerText;
+                    btn.innerText = 'Gerando...';
+                    btn.disabled = true;
+                    
+                    const dataObj = {
+                        url: url || 'Local/Sistema',
+                        date: new Date().toLocaleString(),
+                        moduleName: toolMeta.name,
+                        status: res.success ? 'Concluído com Sucesso' : 'Falha',
+                        rawLog: pre.innerText.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    };
+                    
+                    // Heurística simples para RISK_GRADE baseada no output ou tool type
+                    const output = pre.innerText.toLowerCase();
+                    let riskGrade = 'C'; let riskClass = 'grade-C';
+                    if (isExploit) { riskGrade = 'F'; riskClass = 'grade-F'; }
+                    else if (output.includes('vulnerable') || output.includes('exposed')) { riskGrade = 'F'; riskClass = 'grade-F'; }
+                    else if (output.includes('secure') || output.includes('protected')) { riskGrade = 'A'; riskClass = 'grade-A'; }
+                    
+                    dataObj.riskGrade = riskGrade;
+                    dataObj.riskClass = riskClass;
+                    
+                    const result = await window.electronAPI.exportReportPDF(dataObj);
+                    if (result.success && window.SoundEngine) window.SoundEngine.play('success');
+                    
+                    btn.innerText = oldText;
+                    btn.disabled = false;
+                } catch (e) {
+                    console.error(e);
+                    alert('Erro ao gerar PDF: ' + e.message);
+                }
             };
-        })
-        .catch(err => {
-            const statusBadge = resultCard.querySelector('.tag');
+            
+            if (res.success && window.addXP) {
+                window.addXP(isExploit ? 45 : 15, isExploit ? 'Auditoria Concluída' : 'Uso de Ferramenta');
+            }
+        } catch (err) {
             statusBadge.style.animation = 'none';
             statusBadge.className = 'tag tag-red';
             statusBadge.innerText = 'Falhou';
 
+            if (window.SoundEngine) window.SoundEngine.play('error');
+
             const well = resultCard.querySelector('.data-well');
+            well.style.display = 'block';
             well.style.border = '1px dashed var(--red)';
             well.innerHTML = `<span style="color: var(--red); font-size: 11px; font-family: var(--mono);">${err.message}</span>`;
             
             term.writeln(`\x1b[31m[erro]\x1b[0m Falha ao executar ${toolMeta.name}: ${err.message}`);
             term.prompt();
-        });
+        }
+        return;
+    }
 }
 
 function syntaxHighlightJSON(json) {
@@ -1039,7 +1111,7 @@ document.getElementById('btn-run-scan')?.addEventListener('click', async () => {
                 const isCritical = alertMsg.includes('CRÍTICO') || alertMsg.includes('Alta exposição');
                 
                 if (isCritical) {
-                    AudioEngine.playAlert();
+                    RendererAudioEngine.playAlert();
                     document.querySelector('.app').classList.add('critical-alert');
                     setTimeout(() => document.querySelector('.app').classList.remove('critical-alert'), 3000);
                     
@@ -1494,36 +1566,44 @@ setTimeout(() => {
 // ═══════════ Settings Panel Logic ═══════════
 const rootStyle = document.documentElement.style;
 
-function setGlassMaterial(type) {
-    document.getElementById('glass-solid').style.background = 'transparent';
-    document.getElementById('glass-frost').style.background = 'transparent';
-    document.getElementById('glass-water').style.background = 'transparent';
+function setGraphicsLevel(level) {
+    // level: 'low', 'medium', 'ultra'
     
-    document.getElementById('glass-' + type).style.background = 'rgba(255,255,255,0.15)';
+    // Update active button state
+    document.getElementById('gfx-low')?.classList.remove('active');
+    document.getElementById('gfx-medium')?.classList.remove('active');
+    document.getElementById('gfx-ultra')?.classList.remove('active');
+    document.getElementById('gfx-' + level)?.classList.add('active');
     
-    const appElement = document.querySelector('.app');
+    // Update descriptions
+    document.getElementById('gfx-desc-low').style.display = level === 'low' ? 'block' : 'none';
+    document.getElementById('gfx-desc-medium').style.display = level === 'medium' ? 'block' : 'none';
+    document.getElementById('gfx-desc-ultra').style.display = level === 'ultra' ? 'block' : 'none';
     
-    if (type === 'solid') {
-        rootStyle.setProperty('--surface-app', 'rgba(28, 28, 30, 0.85)');
-        appElement.style.backdropFilter = 'blur(80px) saturate(150%)';
-        appElement.style.webkitBackdropFilter = 'blur(80px) saturate(150%)';
-    } else if (type === 'frost') {
-        rootStyle.setProperty('--surface-app', 'rgba(40, 40, 45, 0.4)');
-        appElement.style.backdropFilter = 'blur(40px) saturate(180%)';
-        appElement.style.webkitBackdropFilter = 'blur(40px) saturate(180%)';
-    } else if (type === 'water') {
-        rootStyle.setProperty('--surface-app', 'rgba(20, 20, 25, 0.15)');
-        appElement.style.backdropFilter = 'blur(25px) saturate(250%)';
-        appElement.style.webkitBackdropFilter = 'blur(25px) saturate(250%)';
+    // Apply body classes
+    document.body.classList.remove('graphics-low', 'graphics-medium', 'graphics-ultra');
+    document.body.classList.add('graphics-' + level);
+    
+    // Save to localStorage
+    localStorage.setItem('inject-ig-graphics', level);
+    
+    // Terminal glow update
+    if (term && term.element) {
+        if (level === 'ultra') {
+            term.element.classList.add('glow-text');
+        } else {
+            term.element.classList.remove('glow-text');
+        }
     }
 }
 
-document.getElementById('glass-solid')?.addEventListener('click', () => setGlassMaterial('solid'));
-document.getElementById('glass-frost')?.addEventListener('click', () => setGlassMaterial('frost'));
-document.getElementById('glass-water')?.addEventListener('click', () => setGlassMaterial('water'));
+document.getElementById('gfx-low')?.addEventListener('click', () => setGraphicsLevel('low'));
+document.getElementById('gfx-medium')?.addEventListener('click', () => setGraphicsLevel('medium'));
+document.getElementById('gfx-ultra')?.addEventListener('click', () => setGraphicsLevel('ultra'));
 
-// Initialize default state
-setGlassMaterial('solid');
+// Initialize default state from localStorage
+const savedGfx = localStorage.getItem('inject-ig-graphics') || 'medium';
+setGraphicsLevel(savedGfx);
 
 // Key Injection Logic
 const keyInjBtns = ['key-inj-hook', 'key-inj-dom', 'key-inj-proto'];
@@ -1539,119 +1619,139 @@ keyInjBtns.forEach(id => {
 // ═══════════ Mobile Deployment Logic ═══════════
 let selectedUsbDevice = null;
 let selectedPlatform = null;
+let mobileLogAutoScroll = true;
+const terminalDiv = document.getElementById('mobile-log-terminal');
 
 async function scanUsbDevices() {
-    const listDiv = document.getElementById('mobile-devices-list');
-    const deployBtn = document.getElementById('btn-deploy-mobile');
+    const select = document.getElementById('mobile-device-select');
+    const startBtn = document.getElementById('btn-start-mobile-log');
     
-    if(!listDiv) return;
-    listDiv.innerHTML = '<div style="text-align: center; color: var(--accent); font-size: 11px; padding: 20px 0;">Escaneando barramento USB...</div>';
+    if(!select) return;
+    select.innerHTML = '<option value="">Buscando dispositivos...</option>';
+    if(startBtn) startBtn.disabled = true;
     
-    const result = await window.electronAPI.getMobileDevices();
-    listDiv.innerHTML = '';
+    const res = await window.electronAPI.getMobileDevices();
+    select.innerHTML = '';
     
-    if (!result.success || !result.devices || result.devices.length === 0) {
-        listDiv.innerHTML = '<div style="text-align: center; color: var(--red); font-size: 11px; padding: 20px 0;">Nenhum dispositivo Android ou Apple encontrado via USB.</div>';
-        deployBtn.disabled = true;
-        selectedUsbDevice = null;
-        selectedPlatform = null;
-        return;
+    if (res.success && res.devices && res.devices.length > 0) {
+        res.devices.forEach(device => {
+            const opt = document.createElement('option');
+            opt.value = device.id;
+            opt.dataset.platform = device.platform;
+            opt.innerText = device.name || device.id;
+            select.appendChild(opt);
+        });
+        if(startBtn) startBtn.disabled = false;
+    } else {
+        select.innerHTML = '<option value="">Nenhum dispositivo detectado</option>';
     }
-    
-    result.devices.forEach(device => {
-        const item = document.createElement('div');
-        item.style.padding = '10px';
-        item.style.borderRadius = '8px';
-        item.style.background = 'rgba(255,255,255,0.03)';
-        item.style.border = '1px solid rgba(255,255,255,0.05)';
-        item.style.cursor = 'pointer';
-        item.style.display = 'flex';
-        item.style.justifyContent = 'space-between';
-        item.style.alignItems = 'center';
-        
-        let iconSvg = '';
-        if (device.platform === 'ios') {
-            // Apple logo icon
-            iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16.636 12.378c-.023-2.617 2.14-3.882 2.234-3.94-.01-.01-1.22-1.782-3.1-2.052-1.99-.286-3.89 1.09-4.912 1.09-1.023 0-2.583-1.066-4.22-1.036-2.124.037-4.084 1.233-5.176 3.125-2.203 3.82-.562 9.475 1.583 12.57 1.05 1.516 2.3 3.23 3.935 3.167 1.586-.062 2.18-.1 3.934-.1 1.753 0 2.296.096 3.934.096 1.68 0 2.766-1.547 3.8-3.056 1.196-1.748 1.688-3.447 1.71-3.535-.038-.016-3.298-1.264-3.322-6.23M15.424 4.542c.866-1.047 1.45-2.503 1.29-3.957-1.23.05-2.748.82-3.637 1.865-.795.932-1.493 2.42-1.31 3.844 1.378.106 2.793-.7 3.657-1.752"/></svg>`;
-        } else {
-            // Android robot icon
-            iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.3414C17.523 16.0934 16.915 16.7014 16.163 16.7014C15.411 16.7014 14.803 16.0934 14.803 15.3414C14.803 14.5894 15.411 13.9814 16.163 13.9814C16.915 13.9814 17.523 14.5894 17.523 15.3414ZM9.19702 16.7014C8.44502 16.7014 7.83702 16.0934 7.83702 15.3414C7.83702 14.5894 8.44502 13.9814 9.19702 13.9814C9.94902 13.9814 10.557 14.5894 10.557 15.3414C10.557 16.0934 9.94902 16.7014 9.19702 16.7014ZM18.156 10.1554L19.866 7.19441C19.957 7.03741 19.905 6.83441 19.749 6.74341C19.593 6.65241 19.389 6.70341 19.298 6.86041L17.551 9.88541C15.938 9.14141 14.043 8.70641 12 8.70641C9.95702 8.70641 8.06202 9.14141 6.44902 9.88541L4.70202 6.86041C4.60702 6.69641 4.39802 6.64941 4.24102 6.74941C4.08502 6.84841 4.04002 7.05441 4.13402 7.21241L5.84402 10.1734C2.56902 11.9664 0.384021 15.3584 0.0520211 19.3364H23.948C23.616 15.3584 21.431 11.9664 18.156 10.1554Z"/></svg>`;
-        }
-        
-        item.innerHTML = `
-            <div>
-                <div style="font-size: 12px; font-weight: 600; color: var(--text-1);">${device.name || device.id}</div>
-                <div style="font-size: 10px; color: var(--green);">${device.status} (${device.platform.toUpperCase()})</div>
-            </div>
-            <div style="color: var(--text-2); opacity: 0.8;">
-                ${iconSvg}
-            </div>
-        `;
-        
-        item.onclick = () => {
-            Array.from(listDiv.children).forEach(c => c.style.borderColor = 'rgba(255,255,255,0.05)');
-            item.style.borderColor = 'var(--accent)';
-            selectedUsbDevice = device.id;
-            selectedPlatform = device.platform;
-            deployBtn.disabled = false;
-            
-            const deployAgentBtn = document.getElementById('btn-deploy-agent');
-            if (deployAgentBtn) {
-                deployAgentBtn.disabled = (selectedPlatform !== 'ios');
-                if (selectedPlatform === 'ios') {
-                    deployAgentBtn.style.opacity = '1';
-                } else {
-                    deployAgentBtn.style.opacity = '0.5';
-                }
-            }
-        };
-        listDiv.appendChild(item);
-    });
 }
 
 document.getElementById('btn-scan-devices')?.addEventListener('click', scanUsbDevices);
 
-document.getElementById('btn-deploy-mobile')?.addEventListener('click', async () => {
-    if (!selectedUsbDevice) return;
+document.getElementById('btn-start-mobile-log')?.addEventListener('click', async () => {
+    const select = document.getElementById('mobile-device-select');
+    if (!select.value) return;
     
-    // Pede ao usuário a pasta alvo para compilar
-    const folderPath = await window.electronAPI.selectLocalTargetFolder();
-    if (!folderPath) {
-        alert("Operação cancelada. Nenhuma pasta foi selecionada.");
-        return;
+    const deviceId = select.value;
+    const platform = select.selectedOptions[0].dataset.platform;
+    
+    document.getElementById('btn-start-mobile-log').style.display = 'none';
+    document.getElementById('btn-stop-mobile-log').style.display = 'block';
+    
+    terminalDiv.innerHTML = '<span style="color: var(--text-3);">[SYSTEM] Conectando ao serviço de log do ' + platform + '...</span>\n';
+    
+    // ── Log Buffering & Optimization ──
+    window.mobileLogBuffers = { all: [], error: [], warn: [], app: [] };
+    window.currentLogTab = 'all';
+    const MAX_LOG_LINES = 800; // Limit to prevent lag
+    
+    // Tab switching listener
+    document.querySelectorAll('[data-log-tab]').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            document.querySelectorAll('[data-log-tab]').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            window.currentLogTab = tab.getAttribute('data-log-tab');
+            
+            // Immediate redraw
+            terminalDiv.innerHTML = window.mobileLogBuffers[window.currentLogTab].join('');
+            if (mobileLogAutoScroll) terminalDiv.scrollTop = terminalDiv.scrollHeight;
+        });
+    });
+
+    // Flushing interval
+    if (window.mobileLogInterval) clearInterval(window.mobileLogInterval);
+    window.mobileLogInterval = setInterval(() => {
+        if (!document.getElementById('view-mobile').classList.contains('active')) return;
+        
+        terminalDiv.innerHTML = window.mobileLogBuffers[window.currentLogTab].join('');
+        if (mobileLogAutoScroll) terminalDiv.scrollTop = terminalDiv.scrollHeight;
+    }, 500);
+
+    window.electronAPI.onMobileSyslog((data) => {
+        // Classify the log
+        const dLower = data.toLowerCase();
+        let isError = data.includes(' E ') || data.includes(' F ') || dLower.includes('error') || dLower.includes('fatal') || dLower.includes('exception');
+        let isWarn = data.includes(' W ') || dLower.includes('warning') || dLower.includes('warn ');
+        // App logs often don't contain common OS native tags, or they contain package names. We'll use a simple heuristic:
+        // Exclude common noise tags like ActivityManager, system_server, kernel, etc.
+        let isApp = !dLower.includes('system_server') && !dLower.includes('activitymanager') && !dLower.includes('kernel') && !dLower.includes('surfaceflinger');
+
+        let color = 'var(--text-2)';
+        if (isError) color = 'var(--red)';
+        else if (isWarn) color = 'var(--accent)';
+        
+        const lineHtml = `<span style="color: ${color};">${data.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>\n`;
+        
+        // Push to All
+        window.mobileLogBuffers.all.push(lineHtml);
+        if (window.mobileLogBuffers.all.length > MAX_LOG_LINES) window.mobileLogBuffers.all.shift();
+        
+        if (isError) {
+            window.mobileLogBuffers.error.push(lineHtml);
+            if (window.mobileLogBuffers.error.length > MAX_LOG_LINES) window.mobileLogBuffers.error.shift();
+        }
+        if (isWarn) {
+            window.mobileLogBuffers.warn.push(lineHtml);
+            if (window.mobileLogBuffers.warn.length > MAX_LOG_LINES) window.mobileLogBuffers.warn.shift();
+        }
+        if (isApp && !isError && !isWarn) { // only pure app logs or include all app logs? We'll include all app logs
+            window.mobileLogBuffers.app.push(lineHtml);
+            if (window.mobileLogBuffers.app.length > MAX_LOG_LINES) window.mobileLogBuffers.app.shift();
+        }
+    });
+    
+    const res = await window.electronAPI.startSyslog(deviceId, platform);
+    if (!res.success) {
+        window.mobileLogBuffers.all.push(`\n<span style="color: var(--red);">[ERRO FATAL] ${res.message}</span>\n`);
+        document.getElementById('btn-stop-mobile-log').click();
     }
-    
-    // Troca pra aba do terminal pra ver o processo
-    document.querySelector('[data-target="view-terminal"]')?.click();
-    term.writeln('\\r\\n\\x1b[33m[usb]\\x1b[0m Iniciando compilação e deploy tático para ' + selectedUsbDevice + '...');
-    
-    const result = await window.electronAPI.buildAndDeployMobile(folderPath, selectedUsbDevice, selectedPlatform);
-    if (result.success) {
-        term.writeln('\\r\\n\\x1b[32m[usb]\\x1b[0m ' + result.message);
-    } else {
-        term.writeln('\\r\\n\\x1b[31m[usb]\\x1b[0m ' + result.message);
-    }
-    term.prompt();
 });
 
-document.getElementById('btn-deploy-agent')?.addEventListener('click', async () => {
-    if (!selectedUsbDevice || selectedPlatform !== 'ios') return;
+document.getElementById('btn-stop-mobile-log')?.addEventListener('click', async () => {
+    await window.electronAPI.stopSyslog();
+    window.electronAPI.offMobileSyslog();
     
-    // Confirmação rápida
-    if (!confirm("Este processo irá compilar o Inject-IG como um aplicativo iOS nativo e fará o Sideload de 7 Dias via USB no dispositivo " + selectedUsbDevice + ". Certifique-se de estar usando um Mac e que o Xcode já configurou sua assinatura pessoal grátis.")) return;
+    document.getElementById('btn-start-mobile-log').style.display = 'block';
+    document.getElementById('btn-stop-mobile-log').style.display = 'none';
     
-    // Troca pra aba do terminal pra ver o processo
-    document.querySelector('[data-target="view-terminal"]')?.click();
-    term.writeln('\\r\\n\\x1b[31m[sideload]\\x1b[0m Preparando a Auto-Compilação do Agente e Injeção no dispositivo ' + selectedUsbDevice + '...');
-    
-    const result = await window.electronAPI.deploySelfAgent(selectedUsbDevice);
-    if (result.success) {
-        term.writeln('\\r\\n\\x1b[32m[sideload]\\x1b[0m ' + result.message);
-    } else {
-        term.writeln('\\r\\n\\x1b[31m[sideload]\\x1b[0m ' + result.message);
-    }
-    term.prompt();
+    window.mobileLogBuffers.all.push('\n<span style="color: var(--text-3);">[SYSTEM] Captura interrompida pelo usuário.</span>\n');
+    terminalDiv.innerHTML = window.mobileLogBuffers[window.currentLogTab].join('');
+    if (mobileLogAutoScroll) terminalDiv.scrollTop = terminalDiv.scrollHeight;
 });
+
+document.getElementById('btn-clear-mobile-log')?.addEventListener('click', () => {
+    window.mobileLogBuffers = { all: [], error: [], warn: [], app: [] };
+    terminalDiv.innerHTML = '';
+});
+
+// Auto-scroll toggle feature: if user scrolls up, disable auto-scroll
+terminalDiv?.addEventListener('scroll', () => {
+    const isAtBottom = terminalDiv.scrollHeight - terminalDiv.scrollTop <= terminalDiv.clientHeight + 10;
+    mobileLogAutoScroll = isAtBottom;
+});
+
+
 // ═══════════ ESPETOR (WebSocket Stream) ═══════════
 let spectreWs = null;
 
@@ -1759,6 +1859,13 @@ document.getElementById('btn-start-spectre')?.addEventListener('click', () => {
 });
 
 document.getElementById('btn-start-usb')?.addEventListener('click', async () => {
+    const select = document.getElementById('spectre-device-select');
+    if (!select || !select.value) {
+        term.writeln(`\\r\\n\\x1b[31m[spectre-usb]\\x1b[0m Selecione um dispositivo móvel na lista antes de interceptar.`);
+        return;
+    }
+    const [platformStr, deviceId] = select.value.split('|');
+
     const idleText = document.getElementById('spectre-idle');
     const feedImg = document.getElementById('spectre-feed');
     const feedVideo = document.getElementById('spectre-usb-feed');
@@ -1769,16 +1876,16 @@ document.getElementById('btn-start-usb')?.addEventListener('click', async () => 
     feedImg.style.display = 'none';
     if (feedVideo) feedVideo.style.display = 'none';
 
-    const result = await window.electronAPI.startUSBCapture();
+    const result = await window.electronAPI.startUSBCapture(platformStr, deviceId);
 
     if (!result.success) {
         idleText.innerText = 'Erro: ' + result.message;
         idleText.style.color = 'var(--red)';
-        term.writeln(`\r\n\x1b[31m[spectre-usb]\x1b[0m ${result.message}`);
+        term.writeln(`\\r\\n\\x1b[31m[spectre-usb]\\x1b[0m ${result.message}`);
         return;
     }
 
-    term.writeln(`\r\n\x1b[35m[spectre-usb]\x1b[0m Captura iniciada. Aguardando frames da tela do dispositivo...`);
+    term.writeln(`\\r\\n\\x1b[35m[spectre-usb]\\x1b[0m Captura via ${platformStr} iniciada. Aguardando frames...`);
 
     // Registra o listener de frames (uma só vez)
     if (!window._usbFrameListening) {
@@ -1790,6 +1897,30 @@ document.getElementById('btn-start-usb')?.addEventListener('click', async () => 
         });
     }
 });
+
+// Lógica para listar os dispositivos móveis no Espetor
+async function scanSpectreDevices() {
+    const select = document.getElementById('spectre-device-select');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">Buscando dispositivos...</option>';
+    
+    const res = await window.electronAPI.getMobileDevices();
+    select.innerHTML = '';
+    
+    if (res.success && res.devices && res.devices.length > 0) {
+        res.devices.forEach(device => {
+            const opt = document.createElement('option');
+            opt.value = `${device.platform}|${device.id}`;
+            opt.innerText = device.name || device.id;
+            select.appendChild(opt);
+        });
+    } else {
+        select.innerHTML = '<option value="">Nenhum dispositivo móvel detectado</option>';
+    }
+}
+
+document.getElementById('btn-spectre-scan')?.addEventListener('click', scanSpectreDevices);
 
 // ═══════════ Auth & Access Control (HWID) ═══════════
 
@@ -1811,15 +1942,33 @@ function grantAccess(user) {
     bannedView.style.display = 'none';
 
     // Show app
-    mainTitlebar.style.display = 'block';
-    mainToolbar.style.display = 'block';
-    mainTerminalView.classList.add('active');
-    mainTerminalView.style.display = 'flex';
+    mainTitlebar.style.display = 'flex';
+    mainToolbar.style.display = 'flex';
     
-    // Update Header Profile
-    document.getElementById('profile-avatar').src = user.avatar_url || currentAvatarUrl;
+    // Mostra Dashboard Bento Box por padrão
+    const dashboardView = document.getElementById('view-dashboard');
+    if (dashboardView) {
+        dashboardView.classList.add('active');
+        dashboardView.style.display = 'flex';
+    } else {
+        mainTerminalView.classList.add('active');
+        mainTerminalView.style.display = 'flex';
+    }
+    
+    // Atualiza botão segmentado ativo
+    document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.seg-btn[data-target="view-dashboard"]')?.classList.add('active');
+    
+    // Update Header Profile and Bento Box
+    const avatarToUse = user.avatar_url || currentAvatarUrl;
+    document.getElementById('profile-avatar').src = avatarToUse;
     document.getElementById('profile-name').innerText = user.username;
     document.getElementById('user-profile-header').style.display = 'flex';
+    
+    const bentoAvatar = document.getElementById('bento-avatar');
+    if (bentoAvatar) bentoAvatar.src = avatarToUse;
+    const bentoName = document.getElementById('bento-name');
+    if (bentoName) bentoName.innerText = user.username;
 
     // Start Realtime Ban Heartbeat (10s)
     if (!window.banHeartbeat) {
@@ -1897,49 +2046,57 @@ function showLicenseScreen() {
 }
 
 // ── Auto Login on Load ──
-window.addEventListener('DOMContentLoaded', async () => {
+// NOTA: O renderer.js é carregado no final do <body>,
+// portanto o DOM já está pronto. Usamos uma IIFE async para iniciar imediatamente.
+(async () => {
     try {
-        currentHWID = await window.electronAPI.getHWID();
-        
-        // Attempt auto login (no username provided)
-        const res = await window.electronAPI.authLoginOrRegister(currentHWID, null, null);
-        
-        if (res.requireLicense) {
-            showLicenseScreen();
+        if (!window.electronAPI) {
+            console.error('[AUTH] window.electronAPI não está disponível! Verifique preload.js.');
             return;
         }
+        
+        currentHWID = await window.electronAPI.getHWID();
+        console.log('[AUTH] HWID carregado:', currentHWID ? currentHWID.substring(0, 8) + '...' : 'NULL');
+        
+        // Tentativa de auto login (sem username)
+        const res = await window.electronAPI.authLoginOrRegister(currentHWID, null, null);
+        console.log('[AUTH] Resposta auto-login:', JSON.stringify(res).substring(0, 100));
 
         if (res.success && res.user) {
-            // Em vez de conceder acesso automático, mostra a tela para confirmar
+            if (!res.requireLicense) {
+                // TEM LICENÇA ATIVA → login automático direto
+                console.log('[AUTH] Licença válida. Entrando como:', res.user.username);
+                currentAvatarUrl = res.user.avatar_url || currentAvatarUrl;
+                grantAccess(res.user);
+                return;
+            }
+            
+            // Tem conta mas não tem licença → preenche formulário, mostra tela de ativação
+            console.log('[AUTH] Usuário encontrado mas sem licença. Pedindo ativação.');
             document.querySelector('#step-setup-profile .card-title').innerText = 'Bem-vindo de volta';
-            document.querySelector('#step-setup-profile .card-desc').innerText = 'Confirme seu usuário ou crie um novo.';
+            document.querySelector('#step-setup-profile .card-desc').innerText = 'Ative sua licença para continuar.';
             document.getElementById('setup-username').value = res.user.username;
             
             if (res.user.avatar_url) {
                 document.getElementById('avatar-preview').src = res.user.avatar_url;
-                window.currentAvatarUrl = res.user.avatar_url;
+                currentAvatarUrl = res.user.avatar_url;
             }
             
             const btn = document.getElementById('btn-enter-system');
-            btn.innerText = `Logar como ${res.user.username}`;
-            
-            document.getElementById('setup-username').addEventListener('input', (e) => {
-                if (e.target.value.trim() !== res.user.username && e.target.value.trim() !== "") {
-                    btn.innerText = 'Criar Novo Perfil';
-                } else {
-                    btn.innerText = `Logar como ${res.user.username}`;
-                }
-            });
+            btn.innerText = `Continuar como ${res.user.username}`;
             
         } else if (res.banned) {
+            console.log('[AUTH] Usuário banido!');
             showBannedScreen(currentHWID);
         } else {
-            // Needs registration, stay on authView (Setup Profile)
+            // Usuário novo → fica na tela de setup
+            console.log('[AUTH] Novo usuário. Aguardando cadastro.');
         }
     } catch (err) {
-        console.error('Failed to load license', err);
+        console.error('[AUTH] Falha crítica no auto-login:', err);
     }
-});
+})();
+
 
 // Event Listeners para a Licença
 document.getElementById('btn-show-policies')?.addEventListener('click', () => {
@@ -1961,6 +2118,23 @@ document.getElementById('btn-close-policies')?.addEventListener('click', () => {
     }
 });
 
+// Add Enter key gesture for login inputs
+['setup-username', 'license-key-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (id === 'setup-username') {
+                    document.getElementById('btn-enter-system').click();
+                } else {
+                    document.getElementById('btn-validate-license').click();
+                }
+            }
+        });
+    }
+});
+
 // ── Setup Profile / Registration ──
 document.getElementById('btn-enter-system').addEventListener('click', async () => {
     const btn = document.getElementById('btn-enter-system');
@@ -1973,7 +2147,7 @@ document.getElementById('btn-enter-system').addEventListener('click', async () =
         return;
     }
 
-    const originalHtml = btn.innerHTML;
+    const originalText = btn.innerText;
     btn.innerHTML = '<span style="color: var(--text-2);">Autenticando Placa...</span>';
     btn.disabled = true;
     
@@ -1981,25 +2155,31 @@ document.getElementById('btn-enter-system').addEventListener('click', async () =
         const res = await window.electronAPI.authLoginOrRegister(currentHWID, username, currentAvatarUrl);
         
         if (res.requireLicense) {
+            btn.innerText = originalText;
+            btn.disabled = false;
             showLicenseScreen();
             return;
         }
 
         if (res.success && res.user) {
             errorMsg.style.display = 'none';
+            // Restaura o botão antes de conceder acesso
+            btn.innerText = originalText;
+            btn.disabled = false;
             grantAccess(res.user);
         } else if (res.banned) {
             showBannedScreen(currentHWID);
         } else {
+            btn.innerText = originalText;
+            btn.disabled = false;
             errorMsg.innerText = res.message || 'Erro ao registrar sistema.';
             errorMsg.style.display = 'block';
         }
     } catch (error) {
+        btn.innerText = originalText;
+        btn.disabled = false;
         errorMsg.innerText = 'Falha de comunicação com o núcleo local.';
         errorMsg.style.display = 'block';
-    } finally {
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
     }
 });
 
@@ -2110,8 +2290,7 @@ async function fetchGPUInfo() {
     }
 }
 
-// Call fetch GPU once DOM is ready
-window.addEventListener('DOMContentLoaded', fetchGPUInfo);
+setTimeout(fetchGPUInfo, 100);
 
 document.querySelectorAll('.avatar-option').forEach(img => {
     img.addEventListener('click', (e) => {
@@ -2652,4 +2831,198 @@ async function doPDFConversion(file, targetFormat) {
         alert('Erro fatal: ' + e.message);
         pdfLoadingPanel.style.display = 'none';
     }
+}
+
+// ==========================================
+// BENTO BOX DASHBOARD LOGIC
+// ==========================================
+// DOM já está pronto (script carregado no fim do body) — executa diretamente
+{
+    // Synchronize Bento Avatar and Name with Setup
+    const updateBentoProfile = () => {
+        const nameInput = document.getElementById('setup-username');
+        const avatarImg = document.getElementById('avatar-preview');
+        const bentoName = document.getElementById('bento-name');
+        const bentoAvatar = document.getElementById('bento-avatar');
+        
+        if (nameInput && nameInput.value.trim() !== '') {
+            bentoName.textContent = nameInput.value.trim();
+        }
+        if (avatarImg && avatarImg.src) {
+            bentoAvatar.src = avatarImg.src;
+        }
+    };
+
+    const profileHeader = document.getElementById('user-profile-header');
+    if (profileHeader) {
+        const observer = new MutationObserver(updateBentoProfile);
+        const profileNameEl = document.getElementById('profile-name');
+        if (profileNameEl) observer.observe(profileNameEl, { characterData: true, childList: true, subtree: true });
+    }
+
+    // Matrix Feed Logic
+    const matrixContainer = document.getElementById('bento-matrix-feed');
+    if (matrixContainer) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()';
+        
+        const createMatrixLine = () => {
+            const line = document.createElement('div');
+            line.className = 'matrix-line';
+            
+            let text = '[sys] ';
+            const len = Math.floor(Math.random() * 30) + 10;
+            for(let i=0; i<len; i++) {
+                text += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            if (Math.random() > 0.8) text += ' OK';
+            else if (Math.random() > 0.9) text = '<span style="color:var(--red)">[WARN] ' + text + '</span>';
+            
+            line.innerHTML = text;
+            matrixContainer.appendChild(line);
+            
+            if (matrixContainer.children.length > 6) {
+                matrixContainer.removeChild(matrixContainer.firstChild);
+            }
+        };
+
+        let matrixInterval;
+        
+        const checkDashboardActive = () => {
+            const dash = document.getElementById('view-dashboard');
+            if (dash && dash.classList.contains('active')) {
+                if (!matrixInterval) {
+                    matrixInterval = setInterval(createMatrixLine, 800);
+                }
+            } else {
+                if (matrixInterval) {
+                    clearInterval(matrixInterval);
+                    matrixInterval = null;
+                }
+            }
+        };
+
+        document.querySelectorAll('.seg-btn').forEach(btn => {
+            btn.addEventListener('click', () => setTimeout(checkDashboardActive, 100));
+        });
+        
+        setTimeout(checkDashboardActive, 1000);
+    }
+}
+
+// ==========================================
+// GAMIFICATION "DARK" SYSTEM
+// ==========================================
+
+const LEVELS = [
+    { level: 1, title: 'Operador', xpRequired: 0 },
+    { level: 2, title: 'Analista Júnior', xpRequired: 50 },
+    { level: 3, title: 'Batedor de Rede', xpRequired: 150 },
+    { level: 4, title: 'Agente de Campo', xpRequired: 300 },
+    { level: 5, title: 'Arquivista Fantasma', xpRequired: 500 },
+    { level: 6, title: 'Hacker Tático', xpRequired: 750 },
+    { level: 7, title: 'Engenheiro Sênior', xpRequired: 1000 },
+    { level: 8, title: 'Mestre OSINT', xpRequired: 1300 },
+    { level: 9, title: 'Sombra Digital', xpRequired: 1700 },
+    { level: 10, title: 'Elite Cyberpunk', xpRequired: 2200 }
+];
+
+let currentXP = parseInt(localStorage.getItem('ig_xp') || '0', 10);
+
+function getLevelInfo(xp) {
+    let currentLvl = LEVELS[0];
+    let nextLvl = LEVELS[1];
+    for(let i=0; i<LEVELS.length; i++) {
+        if(xp >= LEVELS[i].xpRequired) {
+            currentLvl = LEVELS[i];
+            nextLvl = LEVELS[i+1] || null;
+        }
+    }
+    return { current: currentLvl, next: nextLvl };
+}
+
+function renderGamificationUI() {
+    const info = getLevelInfo(currentXP);
+    const badge = document.getElementById('bento-level-badge');
+    const xpText = document.getElementById('bento-xp-text');
+    const xpBar = document.getElementById('bento-xp-bar');
+    
+    if(badge) badge.textContent = `Nível ${info.current.level} - ${info.current.title}`;
+    
+    if(info.next) {
+        const xpIntoLevel = currentXP - info.current.xpRequired;
+        const xpNeeded = info.next.xpRequired - info.current.xpRequired;
+        const pct = Math.min(100, Math.round((xpIntoLevel / xpNeeded) * 100));
+        
+        if(xpText) xpText.textContent = `${currentXP} / ${info.next.xpRequired} XP`;
+        if(xpBar) xpBar.style.width = `${pct}%`;
+    } else {
+        // Max level
+        if(xpText) xpText.textContent = `${currentXP} XP (MAX)`;
+        if(xpBar) xpBar.style.width = `100%`;
+    }
+
+    // Unlocks
+    if(info.current.level >= 10) {
+        document.documentElement.classList.add('theme-cyberpunk');
+    }
+}
+
+window.addXP = function(amount, reason) {
+    currentXP += amount;
+    localStorage.setItem('ig_xp', currentXP);
+    
+    // Toast
+    const toast = document.createElement('div');
+    toast.className = 'xp-toast';
+    toast.innerHTML = `+${amount} XP <span style="font-size:10px; opacity:0.8; font-weight:normal; margin-left:6px;">${reason}</span>`;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if(toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 2500);
+
+    renderGamificationUI();
+};
+
+setTimeout(() => {
+    // Initial render
+    renderGamificationUI();
+    
+    // Attach to specific buttons (if they exist)
+    const scanBtn = document.getElementById('btn-run-scan');
+    if(scanBtn) scanBtn.addEventListener('click', () => window.addXP(20, 'Varredura Concluída'));
+    
+    const scanLocalBtn = document.getElementById('btn-run-scan-local');
+    if(scanLocalBtn) scanLocalBtn.addEventListener('click', () => window.addXP(15, 'Varredura Local'));
+    
+    const spectreBtn = document.getElementById('btn-start-spectre');
+    if(spectreBtn) spectreBtn.addEventListener('click', () => window.addXP(50, 'Interceptação de Rede'));
+    
+    const pdfBtn = document.getElementById('btn-convert-pdf');
+    if(pdfBtn) pdfBtn.addEventListener('click', () => window.addXP(10, 'Processamento Offline'));
+}, 100);
+
+// ═════ BOTÃO DO PÂNICO (KILL SWITCH) ═════
+let isPanicMode = false;
+if (window.electronAPI && window.electronAPI.onTogglePanic) {
+    window.electronAPI.onTogglePanic(() => {
+        isPanicMode = !isPanicMode;
+        const appContainer = document.querySelector('.app');
+        const panicView = document.getElementById('view-panic');
+        
+        if (isPanicMode) {
+            // Esconde tudo e mostra o painel fake
+            if (appContainer) appContainer.style.opacity = '0';
+            if (panicView) {
+                panicView.style.display = 'block';
+                // Remove bg transparente do body
+                document.body.style.background = '#ffffff';
+            }
+        } else {
+            // Restaura
+            if (panicView) panicView.style.display = 'none';
+            if (appContainer) appContainer.style.opacity = '1';
+            document.body.style.background = 'transparent';
+        }
+    });
 }

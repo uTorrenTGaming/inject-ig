@@ -2,3 +2,4 @@ node_modules/
 dist.nosync/
 .env
 .DS_Store
+

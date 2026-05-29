@@ -4,7 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onTerminalData: (callback) => ipcRenderer.on('terminal.incData', (_event, data) => callback(data)),
     sendTerminalKeystroke: (key) => ipcRenderer.send('terminal.keystroke', key),
     openTerminal: (dir) => ipcRenderer.invoke('system.openTerminal', dir),
-    startUSBCapture: () => ipcRenderer.invoke('system.startUSBCapture'),
+    startUSBCapture: (platform, deviceId) => ipcRenderer.invoke('system.startUSBCapture', platform, deviceId),
     stopUSBCapture: () => ipcRenderer.invoke('system.stopUSBCapture'),
     onUSBFrame: (callback) => ipcRenderer.on('spectre.usbFrame', (_event, data) => callback(data)),
     
@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     closeWindow: () => ipcRenderer.send('window.close'),
     minimizeWindow: () => ipcRenderer.send('window.minimize'),
     maximizeWindow: () => ipcRenderer.send('window.maximize'),
+    toggleIphoneMode: (enable) => ipcRenderer.send('window.toggle-iphone-mode', enable),
     
     // System Hardware
     getNetworkTraffic: () => ipcRenderer.invoke('network.getTraffic'),
@@ -21,13 +22,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sendAIMessage: (modelName, messages) => ipcRenderer.invoke('ai.sendMessage', modelName, messages),
     getGPUInfo: () => ipcRenderer.invoke('system.getGPUInfo'),
     
+    onTogglePanic: (callback) => ipcRenderer.on('system.togglePanic', callback),
+    
+    runTool: (toolId, target) => ipcRenderer.invoke('system.runTool', toolId, target),
+    
     // Novas APIs de C2 (Command & Control)
     selectLocalTargetFolder: () => ipcRenderer.invoke('c2.selectTargetFolder'),
     selectScanFolder: () => ipcRenderer.invoke('c2.selectScanFolder'),
     injectPayloadLocal: (folderPath) => ipcRenderer.invoke('c2.injectPayloadLocal', folderPath),
     createScript: (data) => ipcRenderer.invoke('api.createScript', data),
+    executeLocalScript: (type, id, url, payload) => ipcRenderer.invoke('system.executeLocalScript', type, id, url, payload),
     
     // PDF & File Studio
+    exportReportPDF: (htmlContent) => ipcRenderer.invoke('system.exportReportPDF', htmlContent),
     convertFile: (file, format) => {
         let filePath = file;
         if (file && typeof file === 'object') {
@@ -47,6 +54,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // Novas rotas de Deployment Mobile
     getMobileDevices: () => ipcRenderer.invoke('c2.getMobileDevices'),
+    startSyslog: (deviceId, platform) => ipcRenderer.invoke('mobile.startSyslog', deviceId, platform),
+    stopSyslog: () => ipcRenderer.invoke('mobile.stopSyslog'),
+    onMobileSyslog: (callback) => ipcRenderer.on('mobile.syslogData', (event, data) => callback(data)),
+    offMobileSyslog: () => ipcRenderer.removeAllListeners('mobile.syslogData'),
+    
+    // Antigos (mantidos para evitar erro caso algo chame, mas reescritos/removidos)
     buildAndDeployMobile: (folderPath, deviceId, platform) => ipcRenderer.invoke('c2.buildAndDeployMobile', folderPath, deviceId, platform),
     deploySelfAgent: (deviceId) => ipcRenderer.invoke('c2.deploySelfAgent', deviceId),
     

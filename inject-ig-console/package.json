@@ -7,11 +7,13 @@
     "start": "electron .",
     "dev": "electron .",
     "download:jre": "node scripts/download-jre.js",
-    "setup:full": "npm run download:jre && npm run build:all",
-    "build:mac": "npm run download:jre && electron-builder --mac --x64",
-    "build:win": "npm run download:jre && electron-builder --win --x64",
-    "build:linux": "npm run download:jre && electron-builder --linux",
-    "build:all": "npm run download:jre && electron-builder --mac --win --linux",
+    "download:python": "node scripts/download-python.js",
+    "download:adb": "node scripts/download-adb.js",
+    "setup:full": "npm run download:jre && npm run download:python && npm run download:adb && npm run build:all",
+    "build:mac": "npm run download:jre && npm run download:python && npm run download:adb && electron-builder --mac --x64",
+    "build:win": "npm run download:jre && npm run download:python && npm run download:adb && electron-builder --win --x64",
+    "build:linux": "npm run download:jre && npm run download:python && npm run download:adb && electron-builder --linux",
+    "build:all": "npm run download:jre && npm run download:python && npm run download:adb && electron-builder --mac --win --linux",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "postinstall": "electron-rebuild"
@@ -77,8 +79,24 @@
           "to": "engine"
         },
         {
+          "from": "exploits",
+          "to": "exploits"
+        },
+        {
+          "from": "tools",
+          "to": "tools"
+        },
+        {
           "from": "jre/mac",
           "to": "jre"
+        },
+        {
+          "from": "python/mac",
+          "to": "python"
+        },
+        {
+          "from": "adb/mac",
+          "to": "adb"
         }
       ],
       "extendInfo": {
@@ -127,8 +145,24 @@
           "to": "engine"
         },
         {
+          "from": "exploits",
+          "to": "exploits"
+        },
+        {
+          "from": "tools",
+          "to": "tools"
+        },
+        {
           "from": "jre/win",
           "to": "jre"
+        },
+        {
+          "from": "python/win",
+          "to": "python"
+        },
+        {
+          "from": "adb/win",
+          "to": "adb"
         }
       ]
     },
@@ -157,8 +191,24 @@
           "to": "engine"
         },
         {
+          "from": "exploits",
+          "to": "exploits"
+        },
+        {
+          "from": "tools",
+          "to": "tools"
+        },
+        {
           "from": "jre/linux",
           "to": "jre"
+        },
+        {
+          "from": "python/linux",
+          "to": "python"
+        },
+        {
+          "from": "adb/linux",
+          "to": "adb"
         }
       ]
     }
@@ -177,6 +227,8 @@
     "@capacitor/ios": "^8.3.4",
     "@capacitor/network": "^8.0.1",
     "@supabase/supabase-js": "^2.106.1",
+    "adm-zip": "^0.5.17",
+    "appium-ios-device": "^3.1.14",
     "dotenv": "^17.4.2",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.8.3",
