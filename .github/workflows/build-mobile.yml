@@ -24,6 +24,7 @@ jobs:
           cd inject-ig-admin
           npm install
           npm run build
+          npx @capacitor/assets generate
           npx cap sync android
 
       - name: Setup Java (for Android)
@@ -61,6 +62,7 @@ jobs:
           cd inject-ig-admin
           npm install
           npm run build
+          npx @capacitor/assets generate
           npx cap sync ios
 
       - name: Build IPA with Xcode
