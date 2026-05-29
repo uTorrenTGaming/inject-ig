@@ -245,5 +245,6 @@ window.generateInvoicePDF = function(id) {
     doc.save(`NFe_ADM-IG_${lic.key}.pdf`);
 }
 
-// Loop de atualização das licenças a cada 5 segundos
+// Loop de atualização das licenças e usuários a cada 5 segundos
 setInterval(loadLicenses, 5000);
+setInterval(loadUsers, 5000);

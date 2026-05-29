@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "dev": "electron .",
-    "build": "mkdir -p www && cp index.html renderer.js api.js www/",
+    "build": "mkdir -p www && cp index.html renderer.js api.js supabase.js www/",
     "android": "npm run build && npx cap sync android",
     "ios": "npm run build && npx cap sync ios"
   },
