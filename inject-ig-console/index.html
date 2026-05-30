@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* https://*.supabase.co https://api.xposedornot.com https://ipapi.co https://api.open-meteo.com;">
     <title>inject-ig console</title>
     <script src="capacitor.js"></script>
     <link rel="stylesheet" href="./node_modules/xterm/css/xterm.css" />
@@ -32,7 +33,7 @@
             
             --font: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
             --mono: "SF Mono", "JetBrains Mono", monospace;
-            --ease: cubic-bezier(0.25, 0.8, 0.25, 1);
+            --ease: cubic-bezier(0.2, 0.8, 0.2, 1); /* Curva super responsiva de iOS */
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -234,7 +235,7 @@
             overflow-y: auto; overflow-x: hidden;
             width: 100%; min-height: 0;
         }
-        .view.active { display: flex; animation: fadeUp 0.3s var(--ease); }
+        .view.active { display: flex; animation: fadeUp 0.15s var(--ease) forwards; }
 
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(10px); }
@@ -811,15 +812,19 @@
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
             perspective: 2000px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
         }
         body.iphone-3d-mode::before {
             display: none;
         }
         body.iphone-3d-mode .app {
+            position: absolute;
+            top: 50%;
+            left: 50%;
             width: 430px !important;
             height: 932px !important;
             flex: none;
@@ -831,16 +836,26 @@
                 0 0 0 7px #111, /* outer shadow edge */
                 0 40px 80px rgba(0,0,0,0.8), /* drop shadow */
                 -20px -20px 60px rgba(255,255,255,0.05); /* ambient light */
-            transform: scale(0.85);
+            transform: translate(-50%, -50%) scale(0.72);
+            transform-origin: center center;
+            -webkit-app-region: drag;
             transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
-            position: relative;
-            margin: auto;
+            background: #050505; /* Fundo sólido de tela de iPhone */
             transform-style: preserve-3d;
         }
         
-        /* Dynamic Island */
-        body.iphone-3d-mode .app::before {
-            content: '';
+        body.iphone-3d-mode .view,
+        body.iphone-3d-mode .toolbar,
+        body.iphone-3d-mode .status-wrap,
+        body.iphone-3d-mode .main-content,
+        body.iphone-3d-mode input,
+        body.iphone-3d-mode button,
+        body.iphone-3d-mode a {
+            -webkit-app-region: no-drag;
+        }
+        
+        /* Dynamic Island is now a real DOM element */
+        #dynamic-island {
             position: absolute;
             top: 12px;
             left: 50%;
@@ -850,26 +865,62 @@
             background: #000;
             border-radius: 24px;
             z-index: 999999;
-            box-shadow: inset 0 -1px 2px rgba(255,255,255,0.15), 0 2px 10px rgba(0,0,0,0.5);
-            pointer-events: none;
-            transition: width 0.3s var(--ease), height 0.3s var(--ease);
+            box-shadow: inset 0 -1px 2px rgba(255,255,255,0.15), 0 2px 10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px 0 12px;
+            transition: width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), height 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: auto; /* To allow hover states later */
+            overflow: hidden;
         }
-        
-        /* Camera Lens in Dynamic Island */
-        body.iphone-3d-mode .app::after {
-            content: '';
-            position: absolute;
-            top: 24px;
-            left: calc(50% + 42px);
+
+        /* Camera Lens */
+        .di-camera {
             width: 12px;
             height: 12px;
             border-radius: 50%;
             background: radial-gradient(circle at 3px 3px, #1a1a1a 0%, #000 100%);
             box-shadow: inset 0 0 2px rgba(255,255,255,0.3);
-            z-index: 9999999;
-            pointer-events: none;
+            flex-shrink: 0;
+            margin-left: 8px;
         }
 
+        .di-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .di-icon {
+            width: 16px;
+            height: 16px;
+            fill: #3b82f6;
+            filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.6));
+        }
+
+        .di-text {
+            font-family: 'Geist', 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            color: #3b82f6;
+            letter-spacing: -0.5px;
+            text-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Audio Wave animation inside DI */
+        .di-wave {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 12px;
+        }
+        .di-wave-bar {
+            width: 2px;
+            background: #22c55e;
+            border-radius: 1px;
+            box-shadow: 0 0 4px #22c55e;
+        }
         body.iphone-3d-mode .titlebar {
             padding-top: 35px;
             height: 75px;
@@ -880,8 +931,24 @@
         }
     </style>
 </head>
-<body>
+<body class="iphone-3d-mode">
     <div class="app">
+        <!-- ═══ Dynamic Island ═══ -->
+        <div id="dynamic-island">
+            <div class="di-content">
+                <div id="di-icon-container" style="display:flex;align-items:center;margin-right:4px;">
+                    <!-- default inject-ig logo -->
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="di-icon" style="filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                </div>
+                <div class="di-wave">
+                    <div class="di-wave-bar" style="height: 4px;"></div>
+                    <div class="di-wave-bar" style="height: 10px;"></div>
+                    <div class="di-wave-bar" style="height: 6px;"></div>
+                </div>
+                <span class="di-text" id="di-text-content">inject-ig</span>
+            </div>
+            <div class="di-camera"></div>
+        </div>
 
         <!-- Global Ambient Lights for Liquid Glass Refraction -->
         <div class="ambient-orb" style="width: 500px; height: 500px; background: rgba(10, 132, 255, 0.4); top: -150px; left: -150px;"></div>
@@ -891,14 +958,6 @@
         <!-- ═══ Titlebar ═══ -->
         <div class="titlebar" id="main-titlebar" style="display: none; position: relative;">
             
-            <div class="titlebar-text" style="display:flex;align-items:center;justify-content:center;gap:6px; position: absolute; left: 50%; transform: translateX(-50%);">
-                <svg width="22" height="16" viewBox="0 0 44 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-                    <rect x="0" y="0" width="44" height="32" rx="6" fill="rgba(59,130,246,0.12)"/>
-                    <text x="22" y="23" text-anchor="middle" font-family="'Geist','Inter',sans-serif" font-weight="700" font-size="20" fill="#3b82f6" letter-spacing="-0.5">IG</text>
-                </svg>
-                <span>inject-ig</span>
-            </div>
-
             <!-- Apple Style Profile -->
             <div id="user-profile-header" style="display: none; align-items: center; gap: 8px; position: absolute; right: 15px; top: 6px; padding: 4px 10px 4px 6px; background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease;">
                 <img id="profile-avatar" src="" alt="Avatar" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);">
@@ -922,6 +981,7 @@
                 <button class="seg-btn" data-target="view-spectre">Espetor</button>
                 <button class="seg-btn" data-target="view-mobile">Mobile</button>
                 <button class="seg-btn" data-target="view-agent-ig">Agente IG</button>
+                <button class="seg-btn" data-target="view-pc">PC</button>
                 <button class="seg-btn" data-target="view-pdf-studio">Estúdio PDF</button>
                 <button class="seg-btn" data-target="view-weather">Tempo</button>
                 <button class="seg-btn" data-target="view-settings">Ajustes</button>
@@ -930,8 +990,33 @@
 
         <!-- ═══ Auth Views ═══ -->
         
+        <!-- Splash View -->
+        <div id="view-splash" class="view active" style="align-items: center; justify-content: center; height: 100%; position: relative;">
+            <div class="logo-wrap" style="text-align: center; margin-top: -50px;">
+                <div class="logo-box" style="margin: 0 auto 15px;">
+                    <svg class="logo-svg" width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g filter="drop-shadow(0px 2px 8px rgba(255,255,255,0.4))">
+                            <rect x="16" y="20" width="14" height="60" rx="7" fill="#FFFFFF"/>
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M86 54C86 50.686 83.314 48 80 48H64C60.686 48 58 45.314 58 42C58 38.686 60.686 36 64 36H78.36C75.24 28.5 68.22 23 60 23C48.4 23 39 32.4 39 44V56C39 67.6 48.4 77 60 77C68.95 77 76.58 71.3 79.2 63H64C60.686 63 58 60.314 58 57C58 53.686 60.686 51 64 51H80C83.314 51 86 53.686 86 57V63C86 78.46 74.46 91 60 91C41.77 91 27 76.23 27 58V42C27 23.77 41.77 9 60 9C73.86 9 85.74 17.55 89.6 30.2C90.6 33.5 88.8 37 85.5 38C82.2 39 78.7 37.2 77.7 33.9C74.6 24.8 68 18.5 60 18.5C46.47 18.5 35.5 29.47 35.5 43V57C35.5 70.53 46.47 81.5 60 81.5C69.45 81.5 77.6 76.1 81.5 68H64C64 68 64 68 64 68H80C84.418 68 88 64.418 88 60V54H86Z" fill="#FFFFFF"/>
+                            <path d="M80 48H64C59.58 48 56 44.42 56 40C56 35.58 59.58 32 64 32H79C81.76 32 84 34.24 84 37V44C84 46.21 82.21 48 80 48Z" fill="#FFFFFF"/>
+                        </g>
+                    </svg>
+                </div>
+                <div class="app-name" style="font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: #fff;">inject-ig</div>
+                <div class="app-welcome" style="font-size: 11px; color: var(--text-2); margin-top: 4px;">
+                    <span class="welcome-text active" id="splash-message">Iniciando sistema...</span>
+                </div>
+                
+                <div class="status-wrap" style="margin-top: 24px; text-align: center;">
+                    <div class="status-bar-bg" style="width: 160px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin: 0 auto; overflow: hidden;">
+                        <div class="status-bar-fill" id="splash-progress" style="width: 0%; height: 100%; background: #fff; transition: width 0.3s ease;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- User Auth View -->
-        <div id="view-auth" class="view active" style="display: flex; align-items: center; justify-content: center; height: 100%; position: relative;">
+        <div id="view-auth" class="view" style="display: flex; align-items: center; justify-content: center; height: 100%; position: relative;">
             
             <div class="card liquid-glass-card" style="width: 360px; text-align: center; margin-top: -50px; overflow: hidden; position: relative; z-index: 10; padding: 30px 24px;">
                 <svg width="44" height="32" viewBox="0 0 44 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 15px;">
@@ -939,7 +1024,7 @@
                     <text x="22" y="23" text-anchor="middle" font-family="'Geist','Inter',sans-serif" font-weight="700" font-size="20" fill="#3b82f6" letter-spacing="-0.5">IG</text>
                 </svg>
 
-                <div id="step-setup-profile" style="animation: fadeUp 0.3s var(--ease);">
+                <div id="step-setup-profile" style="animation: fadeUp 0.15s var(--ease) forwards;">
                     <div class="card-title" style="font-size: 18px;">Configurar Perfil</div>
                     <div class="card-desc" style="font-size: 11px; margin-bottom: 20px;">Defina sua identidade no sistema.</div>
                     
@@ -958,17 +1043,33 @@
             </div>
         </div>
 
-        <!-- Banned View -->
-        <div id="view-banned" class="view" style="align-items: center; justify-content: center; height: 100%; background: rgba(220, 38, 38, 0.05);">
-            <div class="card" style="width: 360px; text-align: center; border-color: rgba(220, 38, 38, 0.4); background: rgba(20, 5, 5, 0.9);">
-                <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(220, 38, 38, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <!-- Banned View (Apple Style Redesign) -->
+        <div id="view-banned" class="view" style="display: none; align-items: center; justify-content: center; height: 100%; width: 100%; position: relative; overflow: hidden; background: #000;">
+            <!-- Efeito de Fundo Desfocado estilo Apple -->
+            <div style="position: absolute; top: -20%; left: -20%; width: 140%; height: 140%; background: radial-gradient(circle at center, rgba(255, 59, 48, 0.2) 0%, rgba(0,0,0,1) 60%); filter: blur(60px); z-index: 1; pointer-events: none;"></div>
+            
+            <div style="position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 85%; max-width: 320px; padding: 40px 24px; background: rgba(30, 30, 30, 0.4); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); border-radius: 28px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                
+                <!-- Ícone de Cadeado -->
+                <div style="width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(135deg, rgba(255,59,48,0.2), rgba(255,59,48,0.05)); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; border: 1px solid rgba(255,59,48,0.3); box-shadow: 0 0 20px rgba(255,59,48,0.2), inset 0 0 10px rgba(255,59,48,0.1);">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="3" ry="3"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
                 </div>
-                <div class="card-title" style="color: var(--red); font-size: 18px; margin-bottom: 5px;">ACESSO BLOQUEADO</div>
-                <div class="card-desc" style="font-size: 12px; color: var(--text-2);">
-                    O Hardware (HWID) deste computador foi banido permanentemente do sistema.
+                
+                <h1 style="color: #fff; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; margin: 0 0 12px 0; font-family: var(--font);">Acesso Restrito</h1>
+                
+                <p style="font-size: 13px; color: rgba(255,255,255,0.6); text-align: center; line-height: 1.5; margin: 0 0 24px 0; font-family: var(--font);">
+                    Este dispositivo foi permanentemente suspenso por violação das políticas de segurança.
+                </p>
+                
+                <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px;"></div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%;">
+                    <span style="font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Identificador do Aparelho</span>
+                    <code id="banned-hwid-display" style="font-size: 10px; color: #FF3B30; font-family: var(--mono); background: rgba(255,59,48,0.1); padding: 6px 12px; border-radius: 8px; width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid rgba(255,59,48,0.2);">HWID</code>
                 </div>
-                <div style="margin-top: 15px; font-size: 10px; color: var(--text-3); font-family: monospace;" id="banned-hwid-display"></div>
             </div>
         </div>
 
@@ -1070,8 +1171,8 @@
                     <code id="spectre-link" style="color: var(--accent); font-size: 11px; user-select: all; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; width: 100%;">Aguardando IP Local...</code>
                     <div style="display: flex; gap: 6px; flex-wrap: wrap; width: 100%;">
                         <button class="btn btn-ghost" id="btn-copy-spectre" style="flex: 1; min-width: 100px; padding: 6px; font-size: 11px;">Copiar URL</button>
-                        <button class="btn btn-primary" id="btn-tunnel-spectre" style="flex: 1; min-width: 100px; padding: 6px; font-size: 11px;">Túnel Público</button>
-                        <button class="btn btn-green" id="btn-start-spectre" style="flex: 1; min-width: 120px; padding: 6px; font-size: 11px;">Iniciar Web</button>
+                        <button class="btn btn-primary" id="btn-tunnel-spectre" style="flex: 1; min-width: 100px; padding: 6px; font-size: 11px;">Túnel (WAN)</button>
+                        <button class="btn btn-green" id="btn-start-spectre" style="flex: 1; min-width: 120px; padding: 6px; font-size: 11px;">Monitorar via Wi-Fi</button>
                     </div>
                 </div>
                 
@@ -1089,6 +1190,7 @@
             </div>
 
             <div class="card" style="padding: 0; overflow: hidden; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; flex: 1 1 0; position: relative; border-radius: 8px;">
+                <button id="btn-stop-spectre" class="btn btn-red" style="position: absolute; top: 10px; right: 10px; z-index: 30; display: none; padding: 4px 10px; font-size: 10px; border-radius: 6px;">Parar Transmissão</button>
                 <div id="spectre-idle" style="position: absolute; z-index: 10; font-family: var(--mono); font-size: 11px; color: var(--text-3); text-align: center; padding: 10px;">Aguardando Stream...</div>
                 <img id="spectre-feed" style="width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0; z-index: 20; display: none;" />
                 <video id="spectre-usb-feed" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0; z-index: 20; display: none;"></video>
@@ -1388,7 +1490,7 @@
             </div>
 
             <!-- Área de Mensagens -->
-            <div id="ig-chat-messages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: transparent; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+                    <div id="ig-chat-messages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: transparent; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
                 <!-- As mensagens serão injetadas via JS -->
             </div>
 
@@ -1405,6 +1507,43 @@
         </div>
 
         <!-- ═══ Settings ═══ -->
+        <!-- ═══ PC Module ═══ -->
+        <div id="view-pc" class="view" style="display: none; flex-direction: column; overflow-y: auto;">
+            <div class="card" style="margin-bottom: 12px;">
+                <div class="card-label">Hardware</div>
+                <div class="card-title">Estatísticas do Sistema</div>
+                <div class="card-desc" id="pc-stats-text" style="color: var(--accent);">Obtendo informações...</div>
+            </div>
+
+            <div class="card" style="margin-bottom: 12px;">
+                <div class="card-label">Análise</div>
+                <div class="card-title">Scanner de Pastas</div>
+                <div class="card-desc">Faça uma varredura para analisar tamanho e quantidade de arquivos em um diretório.</div>
+                <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center;">
+                    <button class="btn btn-primary" id="btn-pc-scan" style="flex: 0 0 200px;">Escanear Pasta</button>
+                    <code id="pc-scan-result" style="display: none; padding: 6px 10px; background: rgba(0,0,0,0.3); border-radius: 6px; color: var(--green); font-size: 11px; flex: 1;"></code>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 12px;">
+                <div class="card-label">Arquivos</div>
+                <div class="card-title">Organizador Inteligente</div>
+                <div class="card-desc">Move automaticamente arquivos da raiz da pasta escolhida para subpastas (Imagens, Textos, etc).</div>
+                <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center;">
+                    <button class="btn btn-primary" id="btn-pc-organize" style="flex: 0 0 200px; background: var(--accent);">Organizar Pasta</button>
+                    <code id="pc-organize-result" style="display: none; padding: 6px 10px; background: rgba(0,0,0,0.3); border-radius: 6px; color: var(--accent); font-size: 11px; flex: 1;"></code>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-label">Limpeza</div>
+                <div class="card-title">Manutenção de Temporários</div>
+                <div class="card-desc">Libere espaço apagando arquivos soltos e inúteis da pasta Temp do Sistema Operacional.</div>
+                <button class="btn btn-red" id="btn-pc-clean" style="margin-top: 10px; padding: 8px 16px;">Varrer e Limpar Lixo</button>
+                <div id="pc-clean-result" style="margin-top: 10px; font-size: 11px; color: var(--green); display: none;"></div>
+            </div>
+        </div>
+
         <!-- Estúdio PDF View -->
         <div id="view-pdf-studio" class="view" style="display: none; padding: 20px; height: 100%; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -1806,7 +1945,7 @@
     </div>
 
     <!-- Avatar Picker Modal -->
-    <div id="modal-avatar" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(10px); animation: fadeUp 0.3s ease;">
+    <div id="modal-avatar" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(10px); animation: fadeUp 0.15s ease;">
         <div class="card" style="width: 320px; border-color: rgba(255,255,255,0.2);">
             <div class="card-title" style="text-align: center; margin-bottom: 20px;">Escolha seu Avatar</div>
             <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 20px;">
@@ -1828,7 +1967,7 @@
     </div>
 
     <!-- Policies Modal -->
-    <div id="modal-policies" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(10px); animation: fadeUp 0.3s ease; padding: 20px;">
+    <div id="modal-policies" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(10px); animation: fadeUp 0.15s ease; padding: 20px;">
         <div class="card" style="width: 500px; max-width: 90vw; max-height: 80vh; display: flex; flex-direction: column; border-color: rgba(255,255,255,0.2);">
             <div class="card-title" style="text-align: center; margin-bottom: 15px; font-size: 18px; color: var(--text-1);">Políticas do Projeto e Termos de Uso</div>
             <div style="flex: 1; overflow-y: auto; padding-right: 10px; font-size: 12px; color: var(--text-2); line-height: 1.6; font-family: var(--font);">
@@ -1891,18 +2030,46 @@
     <script src="assets/audio.js"></script>
     <script src="renderer.js"></script>
     <script>
+        // Splash Screen Logic (Single Window)
+        if (window.electronAPI && window.electronAPI.onSplashProgress) {
+            window.electronAPI.onSplashProgress((data) => {
+                const fill = document.getElementById('splash-progress');
+                const msg = document.getElementById('splash-message');
+                if (fill) fill.style.width = `${data.progress}%`;
+                if (msg) msg.textContent = data.message || `Carregando... ${data.progress}%`;
+                
+                if (data.progress >= 100) {
+                    setTimeout(() => {
+                        const viewSplash = document.getElementById('view-splash');
+                        const viewAuth = document.getElementById('view-auth');
+                        if (viewSplash && viewAuth) {
+                            viewSplash.style.animation = 'fadeDown 0.15s var(--ease) forwards';
+                            setTimeout(() => {
+                                viewSplash.classList.remove('active');
+                                viewSplash.style.display = 'none';
+                                viewAuth.classList.add('active');
+                            }, 150);
+                        }
+                    }, 50);
+                }
+            });
+        }
+
+        // Add fadeDown animation for splash exit
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes fadeDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); } }`;
+        document.head.appendChild(style);
+
         // iPhone 3D Mode Toggle & Parallax
         document.addEventListener('DOMContentLoaded', () => {
             const toggleIphone3d = document.getElementById('toggle-iphone-3d');
             const app = document.querySelector('.app');
-            let baseScale = 0.6;
+            let baseScale = 0.72; // Atualizado para corresponder ao CSS
 
             function updateScale() {
                 if (document.body.classList.contains('iphone-3d-mode')) {
-                    // With a 320x700 window, a 430x932 app scaled at 0.6 fits nicely
-                    // with room for the heavy drop shadows.
-                    baseScale = 0.6;
-                    app.style.transform = `scale(${baseScale})`;
+                    baseScale = 0.72;
+                    app.style.transform = `translate(-50%, -50%) scale(${baseScale})`;
                 } else {
                     app.style.transform = 'none';
                 }
@@ -1922,7 +2089,7 @@
                             window.electronAPI.toggleIphoneMode(false);
                         }
                     }
-                    setTimeout(updateScale, 50); // slight delay to allow window resize
+                    setTimeout(updateScale, 50); 
                 });
             }
 
@@ -1931,15 +2098,68 @@
                 if (document.body.classList.contains('iphone-3d-mode')) {
                     const xAxis = (window.innerWidth / 2 - e.pageX) / 60;
                     const yAxis = (window.innerHeight / 2 - e.pageY) / 60;
-                    app.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg) scale(${baseScale})`;
+                    // Mantém o alinhamento absoluto translate(-50%, -50%)
+                    app.style.transform = `translate(-50%, -50%) rotateY(${xAxis}deg) rotateX(${yAxis}deg) scale(${baseScale})`;
                 }
             });
 
             document.addEventListener('mouseleave', () => {
                 if (document.body.classList.contains('iphone-3d-mode')) {
-                    app.style.transform = `rotateY(0deg) rotateX(0deg) scale(${baseScale})`;
+                    app.style.transform = `translate(-50%, -50%) rotateY(0deg) rotateX(0deg) scale(${baseScale})`;
                 }
             });
+        });
+    </script>
+    <script src="https://unpkg.com/gsap@3.12.2/dist/gsap.min.js"></script>
+    <script>
+        // Dynamic Island GSAP Animations
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof gsap !== 'undefined') {
+                // Audio wave animation
+                gsap.to('.di-wave-bar', {
+                    height: (i) => [10, 4, 8][i],
+                    duration: 0.4,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut",
+                    stagger: 0.1
+                });
+                
+                // Interactive hover expansion for dynamic island
+                const di = document.getElementById('dynamic-island');
+                if (di) {
+                    di.addEventListener('mouseenter', () => {
+                        const currentText = document.getElementById('di-text-content')?.textContent || '';
+                        const baseWidth = Math.max(125, 80 + (currentText.length * 7.5));
+                        gsap.to(di, {
+                            width: baseWidth + 20,
+                            height: 42,
+                            duration: 0.5,
+                            ease: "elastic.out(1, 0.5)"
+                        });
+                        gsap.to('.di-text', {
+                            opacity: 1,
+                            scale: 1.05,
+                            duration: 0.3
+                        });
+                    });
+                    di.addEventListener('mouseleave', () => {
+                        const currentText = document.getElementById('di-text-content')?.textContent || '';
+                        const baseWidth = Math.max(125, 80 + (currentText.length * 7.5));
+                        gsap.to(di, {
+                            width: baseWidth,
+                            height: 37,
+                            duration: 0.4,
+                            ease: "power2.out"
+                        });
+                        gsap.to('.di-text', {
+                            opacity: 0.9,
+                            scale: 1,
+                            duration: 0.3
+                        });
+                    });
+                }
+            }
         });
     </script>
 </body>

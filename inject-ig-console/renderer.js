@@ -1,4 +1,4 @@
-const SERVER_URL = 'http://localhost:8080'; // CHANGE THIS TO YOUR CLOUD SERVER URL (e.g. https://api.yoursite.com)
+const SERVER_URL = 'http://127.0.0.1:8080'; // CHANGE THIS TO YOUR CLOUD SERVER URL (e.g. https://api.yoursite.com)
 
 // ═══════ Polyfill: AbortSignal.timeout (não existe no Electron antigo no Linux) ═══════
 if (!AbortSignal.timeout) {
@@ -115,6 +115,68 @@ term.writeln('\x1b[90m───────────────────�
 term.writeln('\x1b[90m[Entrada de comandos desativada. Apenas para logs.]\x1b[0m');
 term.writeln('');
 
+// ═══════════ Dynamic Island Global Action Engine ═══════════
+window.showDynamicIslandAction = function(text, iconSvg, durationMs = 3000) {
+    if (typeof gsap === 'undefined') return;
+    
+    const diText = document.getElementById('di-text-content');
+    const diIconContainer = document.getElementById('di-icon-container');
+    const di = document.getElementById('dynamic-island');
+    
+    if (!diText || !di || !diIconContainer) return;
+    
+    const charWidth = 7.5;
+    const actionWidth = Math.max(140, 80 + (text.length * charWidth)); // slightly wider for actions
+    const expandWidth = actionWidth + 30;
+    
+    // Check if there's already an active action timeout
+    if (window.diActionTimeout) {
+        clearTimeout(window.diActionTimeout);
+    }
+    
+    // Save original state before animating the action
+    if (!window.diOriginalState) {
+        window.diOriginalState = {
+            text: diText.textContent,
+            svg: diIconContainer.innerHTML,
+            baseWidth: di.style.width // Store whatever width it had (usually max-content or calculated)
+        };
+    }
+    
+    // Action Animation Timeline (In)
+    gsap.timeline()
+        .to(di, { width: expandWidth, height: 44, duration: 0.2, ease: "power2.out", backgroundColor: "rgba(20,20,20,0.9)", border: "1px solid rgba(255,255,255,0.15)" })
+        .to(diText, { opacity: 0, duration: 0.1 }, "<")
+        .to(diIconContainer, { opacity: 0, scale: 0.5, duration: 0.1 }, "<")
+        .call(() => {
+            diText.textContent = text;
+            if (iconSvg) diIconContainer.innerHTML = iconSvg;
+        })
+        .to(diIconContainer, { opacity: 1, scale: 1.1, duration: 0.2, ease: "back.out(2)" })
+        .to(diText, { opacity: 1, duration: 0.2, color: "#fff" }, "<")
+        .to(di, { width: actionWidth, height: 40, duration: 0.4, ease: "elastic.out(1, 0.5)", delay: 0.1 });
+        
+    // Reset Animation Timeline (Out) after durationMs
+    window.diActionTimeout = setTimeout(() => {
+        const origWidth = Math.max(125, 80 + (window.diOriginalState.text.length * charWidth));
+        
+        gsap.timeline()
+            .to(di, { width: expandWidth, height: 40, duration: 0.2, ease: "power2.out" })
+            .to(diText, { opacity: 0, duration: 0.1 }, "<")
+            .to(diIconContainer, { opacity: 0, scale: 0.5, duration: 0.1 }, "<")
+            .call(() => {
+                diText.textContent = window.diOriginalState.text;
+                diIconContainer.innerHTML = window.diOriginalState.svg;
+                window.diOriginalState = null; // Clear state
+            })
+            .to(diIconContainer, { opacity: 1, scale: 1, duration: 0.2, ease: "back.out(2)" })
+            .to(diText, { opacity: 1, color: "#3b82f6", duration: 0.2 }, "<")
+            .to(di, { width: origWidth, height: 37, backgroundColor: "#000", border: "1px solid rgba(255,255,255,0.05)", duration: 0.4, ease: "elastic.out(1, 0.5)", delay: 0.1 });
+            
+        window.diActionTimeout = null;
+    }, durationMs);
+};
+
 // ═══════════ Navigation Logic ═══════════
 const segBtns = document.querySelectorAll('.seg-btn[data-target]');
 const views = document.querySelectorAll('.view');
@@ -137,6 +199,47 @@ segBtns.forEach(btn => {
             targetView.style.display = targetId === 'view-terminal' ? 'flex' : 'flex'; // Ensure flex for all views
         }
         
+        // --- Dynamic Island Menu Animation ---
+        if (typeof gsap !== 'undefined') {
+            const diText = document.getElementById('di-text-content');
+            const diIconContainer = document.getElementById('di-icon-container');
+            const di = document.getElementById('dynamic-island');
+            
+            if (diText && di && diIconContainer) {
+                // Determine icon based on targetId
+                let iconSvg = '';
+                const btnText = btn.textContent.trim().replace('•', '').trim();
+                
+                switch(targetId) {
+                    case 'view-dashboard': iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'; break;
+                    case 'view-terminal': iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>'; break;
+                    case 'view-inject': iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>'; break;
+                    case 'view-vault': iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>'; break;
+                    case 'view-spectre': iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'; break;
+                    case 'view-pc': iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>'; break;
+                    default: iconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'; break;
+                }
+                
+                // Calculate dynamic width based on text length to prevent overflowing the camera
+                const charWidth = 7.5; // Approx px per char for 13px font
+                const baseWidth = Math.max(125, 80 + (btnText.length * charWidth));
+                const expandWidth = baseWidth + 35;
+
+                // Animate Island expand/contract
+                gsap.timeline()
+                    .to(di, { width: expandWidth, height: 42, duration: 0.2, ease: "power2.out" })
+                    .to(diText, { opacity: 0, duration: 0.1 }, "<")
+                    .to(diIconContainer, { opacity: 0, scale: 0.5, duration: 0.1 }, "<")
+                    .call(() => {
+                        diText.textContent = btnText;
+                        diIconContainer.innerHTML = iconSvg;
+                    })
+                    .to(diIconContainer, { opacity: 1, scale: 1, duration: 0.2, ease: "back.out(2)" })
+                    .to(diText, { opacity: 1, duration: 0.2 }, "<")
+                    .to(di, { width: baseWidth, height: 37, duration: 0.4, ease: "elastic.out(1, 0.5)", delay: 0.1 });
+            }
+        }
+        
         if (targetId === 'view-terminal') setTimeout(() => fitAddon.fit(), 10);
         if (targetId === 'view-tools') renderTools();
         if (targetId === 'view-exploits') renderExploits();
@@ -145,6 +248,9 @@ segBtns.forEach(btn => {
         }
         if (targetId === 'view-agent-ig') {
             if (typeof loadAgentIgHistory === 'function') loadAgentIgHistory();
+        }
+        if (targetId === 'view-pc') {
+            if (typeof updatePcStats === 'function') updatePcStats();
         }
     });
 });
@@ -1042,6 +1148,11 @@ document.getElementById('btn-run-scan')?.addEventListener('click', async () => {
     if (!url) return;
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
+    // Trigger Dynamic Island Action
+    if (window.showDynamicIslandAction) {
+        window.showDynamicIslandAction('Analisando Alvo', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.4));"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>', 5000);
+    }
+
     const progressBar = document.getElementById('scan-progress');
     const progressFill = document.getElementById('scan-progress-fill');
     const scoreArea = document.getElementById('scan-score-area');
@@ -1151,6 +1262,12 @@ document.getElementById('btn-run-scan-local')?.addEventListener('click', async (
     try {
         const folderPath = await window.electronAPI.selectScanFolder();
         if (!folderPath) return;
+        
+        // Trigger Dynamic Island Action
+        if (window.showDynamicIslandAction) {
+            window.showDynamicIslandAction('Lendo Arquivos', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(234, 179, 8, 0.4));"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>', 4000);
+        }
+        
         vaultResults.innerHTML = '<div style="text-align:center;padding:20px;font-size:10px;">Varrendo local...</div>';
         const res = await fetch(SERVER_URL + '/api/inject-ig/scan-local', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1548,7 +1665,12 @@ document.getElementById('btn-start-core')?.addEventListener('click', () => {
 });
 document.getElementById('btn-inject-local')?.addEventListener('click', async () => {
     const p = await window.electronAPI.selectLocalTargetFolder();
-    if (p) window.electronAPI.injectPayloadLocal(p);
+    if (p) {
+        if (window.showDynamicIslandAction) {
+            window.showDynamicIslandAction('Injetando...', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.4));"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>', 3000);
+        }
+        window.electronAPI.injectPayloadLocal(p);
+    }
 });
 
 document.getElementById('tool-search')?.addEventListener('input', (e) => renderTools(e.target.value));
@@ -1814,7 +1936,23 @@ document.getElementById('btn-start-spectre')?.addEventListener('click', () => {
     spectreWs.onmessage = (event) => {
         try {
             const payload = JSON.parse(event.data);
-            if (payload.type === 'payload_drop' && payload.data) {
+            if (payload.type === 'stream_frame' && payload.data) {
+                // Otimização de renderização (Wi-Fi)
+                document.getElementById('spectre-idle').style.display = 'none';
+                document.getElementById('btn-stop-spectre').style.display = 'block';
+                const feedImg = document.getElementById('spectre-feed');
+                feedImg.style.display = 'block';
+                
+                if (!window.webPendingFrame) {
+                    window.webPendingFrame = payload.data;
+                    requestAnimationFrame(() => {
+                        feedImg.src = window.webPendingFrame;
+                        window.webPendingFrame = null;
+                    });
+                } else {
+                    window.webPendingFrame = payload.data;
+                }
+            } else if (payload.type === 'payload_drop' && payload.data) {
                 // Esconde a label idle
                 document.getElementById('spectre-idle').style.display = 'none';
                 
@@ -1887,15 +2025,50 @@ document.getElementById('btn-start-usb')?.addEventListener('click', async () => 
 
     term.writeln(`\\r\\n\\x1b[35m[spectre-usb]\\x1b[0m Captura via ${platformStr} iniciada. Aguardando frames...`);
 
-    // Registra o listener de frames (uma só vez)
+    // Registra o listener de frames (uma só vez) com otimização (requestAnimationFrame)
     if (!window._usbFrameListening) {
         window._usbFrameListening = true;
+        window.usbPendingFrame = null;
         window.electronAPI.onUSBFrame((base64Frame) => {
             idleText.style.display = 'none';
-            feedImg.src = base64Frame;
+            document.getElementById('btn-stop-spectre').style.display = 'block';
             feedImg.style.display = 'block';
+            
+            if (!window.usbPendingFrame) {
+                window.usbPendingFrame = base64Frame;
+                requestAnimationFrame(() => {
+                    feedImg.src = window.usbPendingFrame;
+                    window.usbPendingFrame = null;
+                });
+            } else {
+                window.usbPendingFrame = base64Frame; // Atualiza para o frame mais recente e descarta o atrasado
+            }
         });
     }
+});
+
+// Botão de Parar Visualização (Wi-Fi e USB)
+document.getElementById('btn-stop-spectre')?.addEventListener('click', async () => {
+    // Parar Wi-Fi
+    if (spectreWs) {
+        spectreWs.close();
+        spectreWs = null;
+    }
+    
+    // Parar USB
+    await window.electronAPI.stopUSBCapture();
+    
+    // Resetar UI
+    document.getElementById('btn-stop-spectre').style.display = 'none';
+    document.getElementById('spectre-feed').style.display = 'none';
+    document.getElementById('spectre-feed').src = '';
+    
+    const idleText = document.getElementById('spectre-idle');
+    idleText.innerText = 'Visualização Interrompida.';
+    idleText.style.color = 'var(--text-3)';
+    idleText.style.display = 'block';
+    
+    term.writeln(`\\r\\n\\x1b[35m[spectre]\\x1b[0m Transmissão de tela encerrada pelo operador.`);
 });
 
 // Lógica para listar os dispositivos móveis no Espetor
@@ -2020,16 +2193,40 @@ function grantAccess(user) {
 }
 
 function showBannedScreen(hwid) {
-    // RIGID BAN: Destrói completamente todos os elementos da interface para não sobrar nada a ser "des-escondido" no DevTools
-    document.body.innerHTML = `
-        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0a0000; z-index: 9999999999; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-            <div style="width: 100px; height: 100px; border-radius: 50%; background: rgba(220, 38, 38, 0.2); display: flex; align-items: center; justify-content: center; margin-bottom: 25px;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+    const appElement = document.querySelector('.app');
+    if (!appElement) return;
+
+    // RIGID BAN: Destrói o conteúdo do app para segurança, mas preserva a casca (.app) para manter o formato 3D do iPhone
+    appElement.innerHTML = `
+        <div style="width: 100%; height: 100%; background: #000; z-index: 9999999999; display: flex; align-items: center; justify-content: center; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; position: relative;">
+            
+            <!-- Efeito de Fundo Desfocado estilo Apple -->
+            <div style="position: absolute; top: -20%; left: -20%; width: 140%; height: 140%; background: radial-gradient(circle at center, rgba(255, 59, 48, 0.2) 0%, rgba(0,0,0,1) 60%); filter: blur(60px); z-index: 1; pointer-events: none;"></div>
+            
+            <!-- Modal Principal -->
+            <div style="position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 85%; max-width: 340px; padding: 40px 24px; background: rgba(30, 30, 30, 0.4); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%); border-radius: 28px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                
+                <!-- Ícone de Cadeado -->
+                <div style="width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(135deg, rgba(255,59,48,0.2), rgba(255,59,48,0.05)); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; border: 1px solid rgba(255,59,48,0.3); box-shadow: 0 0 20px rgba(255,59,48,0.2), inset 0 0 10px rgba(255,59,48,0.1);">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="3" ry="3"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                
+                <h1 style="color: #fff; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; margin: 0 0 12px 0;">Acesso Restrito</h1>
+                
+                <p style="font-size: 13px; color: rgba(255,255,255,0.6); text-align: center; line-height: 1.5; margin: 0 0 24px 0;">
+                    Este dispositivo foi permanentemente suspenso por violação das políticas de segurança.
+                </p>
+                
+                <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px;"></div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%;">
+                    <span style="font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Identificador do Aparelho</span>
+                    <code style="font-size: 10px; color: #FF3B30; font-family: monospace; background: rgba(255,59,48,0.1); padding: 6px 12px; border-radius: 8px; width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid rgba(255,59,48,0.2); box-sizing: border-box;">${hwid || 'UNKNOWN'}</code>
+                </div>
             </div>
-            <div style="color: #dc2626; font-size: 64px; font-weight: 900; letter-spacing: 10px; text-shadow: 0 0 20px rgba(220, 38, 38, 0.5);">BANNED</div>
-            <div style="color: #fff; font-size: 16px; margin-top: 20px; font-family: monospace; letter-spacing: 2px;">ACESSO BLOQUEADO PERMANENTEMENTE</div>
-            <div style="color: #ff4444; font-size: 12px; margin-top: 15px; font-family: monospace;">A sua identificação de Hardware (HWID) foi suspensa pelo Administrador.</div>
-            <div style="color: rgba(255,255,255,0.3); font-size: 10px; margin-top: 30px; font-family: monospace; background: rgba(255,0,0,0.1); padding: 5px 15px; border-radius: 4px;">HWID: ${hwid || 'UNKNOWN'}</div>
         </div>
     `;
 }
@@ -3026,3 +3223,100 @@ if (window.electronAPI && window.electronAPI.onTogglePanic) {
         }
     });
 }
+
+// ── PC Module Logic ──
+async function updatePcStats() {
+    if (!window.electronAPI || !window.electronAPI.getSystemStats) return;
+    try {
+        const stats = await window.electronAPI.getSystemStats();
+        const textEl = document.getElementById('pc-stats-text');
+        if (textEl) {
+            textEl.innerHTML = `
+                <b>Sistema:</b> ${stats.platform} (${stats.arch})<br>
+                <b>Processador:</b> ${stats.cpuModel} (${stats.cpus} Cores)<br>
+                <b>Memória RAM:</b> ${stats.freeMem}GB Livres de ${stats.totalMem}GB Total
+            `;
+            textEl.style.color = "var(--text-2)";
+        }
+    } catch (e) {
+        console.error("Erro ao obter estatísticas do PC", e);
+    }
+}
+
+document.getElementById('btn-pc-scan')?.addEventListener('click', async () => {
+    if (!window.electronAPI) return;
+    const btn = document.getElementById('btn-pc-scan');
+    const resultEl = document.getElementById('pc-scan-result');
+    
+    btn.innerText = "Analisando...";
+    btn.disabled = true;
+    resultEl.style.display = 'none';
+    
+    try {
+        const res = await window.electronAPI.scanFolder();
+        if (res && res.success) {
+            resultEl.innerText = `${res.files} Arquivos Encontrados - Tamanho Total: ${res.sizeMb.toFixed(2)} MB`;
+            resultEl.style.color = "var(--green)";
+            resultEl.style.display = 'block';
+        } else if (res && !res.success) {
+            resultEl.innerText = "Operação cancelada ou erro.";
+            resultEl.style.color = "var(--amber)";
+            resultEl.style.display = 'block';
+        }
+    } finally {
+        btn.innerText = "Escanear Pasta";
+        btn.disabled = false;
+    }
+});
+
+document.getElementById('btn-pc-organize')?.addEventListener('click', async () => {
+    if (!window.electronAPI) return;
+    const btn = document.getElementById('btn-pc-organize');
+    const resultEl = document.getElementById('pc-organize-result');
+    
+    btn.innerText = "Organizando...";
+    btn.disabled = true;
+    resultEl.style.display = 'none';
+    
+    try {
+        const res = await window.electronAPI.organizeFolder();
+        if (res && res.success) {
+            resultEl.innerText = `Organização concluída! ${res.moved} arquivos movidos para subpastas.`;
+            resultEl.style.color = "var(--accent)";
+            resultEl.style.display = 'block';
+        } else if (res && !res.success) {
+            resultEl.innerText = "Operação cancelada ou pasta vazia.";
+            resultEl.style.color = "var(--amber)";
+            resultEl.style.display = 'block';
+        }
+    } finally {
+        btn.innerText = "Organizar Pasta";
+        btn.disabled = false;
+    }
+});
+
+document.getElementById('btn-pc-clean')?.addEventListener('click', async () => {
+    if (!window.electronAPI) return;
+    const btn = document.getElementById('btn-pc-clean');
+    const resultEl = document.getElementById('pc-clean-result');
+    
+    btn.innerText = "Limpando...";
+    btn.disabled = true;
+    resultEl.style.display = 'none';
+    
+    try {
+        const res = await window.electronAPI.clearTempFiles();
+        if (res && res.success) {
+            resultEl.innerText = `Limpeza Profunda concluída: ${res.deletedFiles} arquivos deletados (${res.freedMb.toFixed(2)} MB recuperados).`;
+            resultEl.style.color = "var(--green)";
+            resultEl.style.display = 'block';
+        } else {
+            resultEl.innerText = "Erro ao executar limpeza.";
+            resultEl.style.color = "var(--red)";
+            resultEl.style.display = 'block';
+        }
+    } finally {
+        btn.innerText = "Varrer e Limpar Lixo";
+        btn.disabled = false;
+    }
+});

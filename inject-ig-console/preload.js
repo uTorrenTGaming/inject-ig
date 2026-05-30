@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     minimizeWindow: () => ipcRenderer.send('window.minimize'),
     maximizeWindow: () => ipcRenderer.send('window.maximize'),
     toggleIphoneMode: (enable) => ipcRenderer.send('window.toggle-iphone-mode', enable),
+    onSplashProgress: (callback) => ipcRenderer.on('splash.progress', (_event, data) => callback(data)),
     
     // System Hardware
     getNetworkTraffic: () => ipcRenderer.invoke('network.getTraffic'),
@@ -79,5 +80,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     installUpdate: () => ipcRenderer.send('update.install'),
     onUpdateStatus: (callback) => ipcRenderer.on('update.status', (_event, msg) => callback(msg)),
     onUpdateProgress: (callback) => ipcRenderer.on('update.progress', (_event, progress) => callback(progress)),
-    onUpdateReady: (callback) => ipcRenderer.on('update.ready', (_event, msg) => callback(msg))
+    onUpdateReady: (callback) => ipcRenderer.on('update.ready', (_event, msg) => callback(msg)),
+    
+    // PC Module
+    getSystemStats: () => ipcRenderer.invoke('pc.getSystemStats'),
+    scanFolder: () => ipcRenderer.invoke('pc.scanFolder'),
+    organizeFolder: () => ipcRenderer.invoke('pc.organizeFolder'),
+    clearTempFiles: () => ipcRenderer.invoke('pc.clearTempFiles')
 });

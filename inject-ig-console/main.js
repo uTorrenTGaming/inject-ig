@@ -36,12 +36,12 @@ const isPackaged = app.isPackaged;
  */
 function getJarPath() {
     if (isPackaged) {
-        return path.join(process.resourcesPath, 'backend', 'core.jar');
+        return path.join(process.resourcesPath, 'backend', 'core.dat');
     }
     // Dev mode: look one level up for the shared JAR
-    const devJar = path.join(__dirname, 'backend', 'core.jar');
+    const devJar = path.join(__dirname, 'backend', 'core.dat');
     if (fs.existsSync(devJar)) return devJar;
-    return path.join(__dirname, '../inject-ig-core.jar');
+    return path.join(__dirname, '../inject-ig-core.dat');
 }
 
 function getDataDir() {
@@ -177,7 +177,11 @@ function findPythonBinary() {
 
     // 1. PRIORIDADE 1 - Python Bundled
     if (isPackaged) {
-        const bundledPython = path.join(process.resourcesPath, 'python', pyBinName);
+        let bundledPython = path.join(process.resourcesPath, 'python', 'python', pyBinName);
+        if (!fs.existsSync(bundledPython)) {
+            // Fallback just in case the structure was flattened
+            bundledPython = path.join(process.resourcesPath, 'python', pyBinName);
+        }
         if (fs.existsSync(bundledPython)) {
             log.info(`[backend] Usando Python bundled: ${bundledPython}`);
             return bundledPython;
@@ -217,51 +221,29 @@ function findPythonBinary() {
     return 'python3';
 }
 
-// ═════ SPLASH WINDOW ═════
-function createSplashWindow() {
-    splashWindow = new BrowserWindow({
-        width: 450,
-        height: 600,
-        backgroundColor: '#07080d',
-        // transparent: false,
-        // frame: false,
-        show: true,
-        resizable: true,
-        center: true,
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
-            preload: path.join(__dirname, 'preload-splash.js')
-        }
-    });
-
-    splashWindow.loadFile('splash.html');
-
-    splashWindow.on('closed', () => {
-        splashWindow = null;
-    });
-}
-
+// ═════ SPLASH WINDOW (REMOVIDO PARA TRANSIÇÃO PERFEITA) ═════
 function sendSplashProgress(step, progress, message) {
-    if (splashWindow && !splashWindow.isDestroyed()) {
-        splashWindow.webContents.send('splash.progress', { step, progress, message });
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('splash.progress', { step, progress, message });
     }
 }
 
 // ═════ MAIN APP WINDOW ═════
 function createMainWindow() {
     mainWindow = new BrowserWindow({
-        width: 1000,
-        height: 700,
-        show: false, // Oculto até o splash terminar
+        width: 330,
+        height: 680,
+        show: true, // Mostra imediatamente para exibir o splash embutido
         backgroundColor: '#00000000',
         transparent: true,
-        titleBarStyle: 'hiddenInset',
+        frame: false,
+        hasShadow: false,
         alwaysOnTop: false,
-        resizable: true,
+        resizable: false,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            sandbox: true,
             preload: path.join(__dirname, 'preload.js')
         }
     });
@@ -279,6 +261,9 @@ function createMainWindow() {
     });
 }
 
+// ═════ RATE LIMITING (Auth) ═════
+const loginAttempts = new Map();
+
 // ═════ IPC HANDLERS (registrados uma única vez) ═════
 function setupIpcHandlers() {
     // ── Auth & HWID ──
@@ -293,6 +278,19 @@ function setupIpcHandlers() {
 
     ipcMain.handle('auth.loginOrRegister', async (event, hwid, username, avatar_url) => {
         try {
+            const now = Date.now();
+            const attempts = loginAttempts.get(hwid) || { count: 0, firstAttempt: now };
+            if (now - attempts.firstAttempt > 60000) {
+                attempts.count = 1;
+                attempts.firstAttempt = now;
+            } else {
+                attempts.count++;
+                if (attempts.count > 10) {
+                    return { success: false, message: 'Muitas tentativas (Rate Limit). Tente novamente em 1 minuto.' };
+                }
+            }
+            loginAttempts.set(hwid, attempts);
+
             if (!db.client) await db.connect();
             const userCheck = await db.findUserByHWID(hwid);
             if (userCheck && userCheck.is_banned) {
@@ -479,21 +477,10 @@ function setupIpcHandlers() {
         }
     });
     
-    // iPhone 3D Window Resizer
-    let lastWindowBounds = { width: 1000, height: 700 };
+    // iPhone 3D Window Resizer (Global now)
+    let lastWindowBounds = { width: 460, height: 970 };
     ipcMain.on('window.toggle-iphone-mode', (event, enable) => {
-        if (!mainWindow) return;
-        if (enable) {
-            lastWindowBounds = mainWindow.getBounds();
-            // iPhone 17 Pro Max dimensions + margins for shadow (e.g. 320x700 total window)
-            mainWindow.setMinimumSize(320, 700);
-            mainWindow.setSize(320, 700, true);
-            mainWindow.setAlwaysOnTop(true, 'floating');
-        } else {
-            mainWindow.setAlwaysOnTop(false);
-            mainWindow.setMinimumSize(450, 600);
-            mainWindow.setBounds(lastWindowBounds, true);
-        }
+        // Ignorado porque agora o iPhone é global
     });
 
     // ── Terminal ──
@@ -506,7 +493,7 @@ function setupIpcHandlers() {
             terminalCwd = app.getPath('userData');
         } else {
             const devEngineDir = path.join(__dirname, '../inject-ig-engine');
-            terminalCwd = fs.existsSync(devEngineDir) ? devEngineDir : __dirname;
+            terminalCwd = fs.existsSync(devEngineDir) ? devEngineDir : app.getPath('userData');
         }
         const childProc = exec(command, { cwd: terminalCwd, env: { ...process.env, PATH: ENV_PATH }, windowsHide: true });
         childProc.stdout.on('data', (data) => {
@@ -784,7 +771,7 @@ function setupIpcHandlers() {
     });
 
     ipcMain.handle('c2.generatePublicLink', () => new Promise((resolve) => {
-        const child = exec('npx --yes localtunnel --port 8080', { cwd: __dirname });
+        const child = exec('npx --yes localtunnel --port 8080', { cwd: app.getPath('userData') });
         child.stdout.on('data', d => {
             const t = d.toString();
             if (t.includes('your url is:')) resolve({ success: true, url: t.split('your url is:')[1].trim() });
@@ -974,6 +961,114 @@ function setupIpcHandlers() {
             });
         });
     });
+    // ── PC Module ──
+    ipcMain.handle('pc.getSystemStats', async () => {
+        return {
+            platform: os.platform(),
+            arch: os.arch(),
+            totalMem: (os.totalmem() / 1024 / 1024 / 1024).toFixed(2),
+            freeMem: (os.freemem() / 1024 / 1024 / 1024).toFixed(2),
+            cpus: os.cpus().length,
+            cpuModel: os.cpus()[0]?.model
+        };
+    });
+
+    ipcMain.handle('pc.scanFolder', async (event) => {
+        const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+        if (result.canceled || result.filePaths.length === 0) return null;
+        
+        const targetPath = result.filePaths[0];
+        let count = 0;
+        let size = 0;
+        
+        async function scan(dir) {
+            try {
+                const files = await fs.promises.readdir(dir, { withFileTypes: true });
+                for (const f of files) {
+                    const fullPath = path.join(dir, f.name);
+                    if (f.isDirectory()) {
+                        await scan(fullPath);
+                    } else {
+                        count++;
+                        const st = await fs.promises.stat(fullPath);
+                        size += st.size;
+                    }
+                }
+            } catch(e) {} // Ignorar pastas sem permissão
+        }
+        await scan(targetPath);
+        return { success: true, files: count, sizeMb: size / (1024 * 1024) };
+    });
+
+    ipcMain.handle('pc.organizeFolder', async (event) => {
+        const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+        if (result.canceled || result.filePaths.length === 0) return null;
+        const targetPath = result.filePaths[0];
+        
+        const categories = {
+            'Imagens': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic'],
+            'Documentos': ['.pdf', '.doc', '.docx', '.txt', '.xlsx', '.csv', '.md'],
+            'Vídeos': ['.mp4', '.mkv', '.avi', '.mov', '.wmv'],
+            'Áudio': ['.mp3', '.wav', '.ogg', '.flac'],
+            'Arquivos': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+            'Programas': ['.exe', '.msi', '.dmg', '.pkg', '.deb']
+        };
+        
+        let moved = 0;
+        try {
+            const files = await fs.promises.readdir(targetPath, { withFileTypes: true });
+            for (const f of files) {
+                if (!f.isDirectory()) {
+                    const ext = path.extname(f.name).toLowerCase();
+                    if (!ext) continue; // Pular arquivos sem extensão
+                    
+                    let destFolder = 'Outros';
+                    for (const [folder, exts] of Object.entries(categories)) {
+                        if (exts.includes(ext)) { destFolder = folder; break; }
+                    }
+                    
+                    const destPath = path.join(targetPath, destFolder);
+                    try { await fs.promises.mkdir(destPath, { recursive: true }); } catch(e){}
+                    
+                    const oldFile = path.join(targetPath, f.name);
+                    const newFile = path.join(destPath, f.name);
+                    
+                    // Se o arquivo não existir lá, mover
+                    if (!fs.existsSync(newFile)) {
+                        await fs.promises.rename(oldFile, newFile);
+                        moved++;
+                    }
+                }
+            }
+            return { success: true, moved };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
+    ipcMain.handle('pc.clearTempFiles', async () => {
+        const tempDir = os.tmpdir();
+        let deletedFiles = 0;
+        let freedSpace = 0;
+        try {
+            const files = await fs.promises.readdir(tempDir);
+            for (const f of files) {
+                const p = path.join(tempDir, f);
+                try {
+                    const st = await fs.promises.stat(p);
+                    // Deletar arquivos temporários com mais de 24h
+                    if (st.isFile() && (Date.now() - st.mtimeMs > 1000 * 60 * 60 * 24)) { 
+                        await fs.promises.unlink(p);
+                        deletedFiles++;
+                        freedSpace += st.size;
+                    }
+                } catch(e){}
+            }
+            return { success: true, deletedFiles, freedMb: freedSpace / (1024*1024) };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
 
     // ── Local Exploits & Tools Engine ──
     ipcMain.handle('system.executeLocalScript', async (event, type, id, targetUrl, payloadData) => {
@@ -1125,10 +1220,24 @@ function waitForApi(maxAttempts, interval, onReady, onFail) {
 }
 
 function startBackend(callback) {
-    const jarPath = getJarPath();
+    const datPath = getJarPath();
 
-    if (!fs.existsSync(jarPath)) {
-        callback(new Error(`JAR não encontrado: ${jarPath}`));
+    if (!fs.existsSync(datPath)) {
+        callback(new Error(`Motor CORE (criptografado) não encontrado: ${datPath}`));
+        return;
+    }
+
+    // Decrypt on the fly to temp dir for execution
+    const jarPath = path.join(app.getPath('userData'), 'core_runtime.jar');
+    try {
+        const buf = fs.readFileSync(datPath);
+        const key = Buffer.from('IGOR_CORE_SECURE');
+        for(let i=0; i<buf.length; i++) {
+            buf[i] ^= key[i % key.length];
+        }
+        fs.writeFileSync(jarPath, buf);
+    } catch(e) {
+        callback(new Error(`Falha ao descriptografar o motor core: ${e.message}`));
         return;
     }
 
@@ -1250,10 +1359,7 @@ async function installDependencies() {
 
 // ═════ LAUNCH SEQUENCE ═════
 async function launch() {
-    // 1. Abre a splash (única janela visível durante o carregamento)
-    createSplashWindow();
-
-    // 2. Carrega a janela principal em segundo plano (escondida)
+    // Initialize Window
     createMainWindow();
 
     setupAutoUpdater();
@@ -1292,30 +1398,47 @@ async function launch() {
     await installDependencies();
 
     try {
-        await new Promise((resolve, reject) => {
-            // Increase timeout to 90 seconds (90 attempts of 1000ms) because Spring Boot
-            // can take ~30s on first boot to create the H2 database schema.
-            waitForApi(90, 1000, resolve, reject);
-        });
+        // Core started in background. We do not block the UI for it to boot.
+        // Spring Boot can take 10-15s, but the user should be able to login immediately.
         sendSplashProgress(4, 100, 'Sistema pronto!');
+        
+        // Spin off a background checker so we log when it's actually ready
+        waitForApi(90, 1000, () => log.info('Core finally ready in background'), (e) => log.error('Core background timeout', e));
     } catch (e) {
-        sendSplashProgress(4, 100, 'Aviso: Core demorando a responder...');
-        log.error('Core timeout:', e);
+        log.error('Erro na inicializacao background', e);
     }
 
-    await new Promise(r => setTimeout(r, 400)); // Pequena pausa visual
+    await new Promise(r => setTimeout(r, 100)); // Animação muito mais rápida
 
+    // A UI em index.html lidará com a transição internamente
     if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.show();
         mainWindow.focus();
-    }
-    if (splashWindow && !splashWindow.isDestroyed()) {
-        splashWindow.close();
     }
 }
 
 // ═════ APP LIFECYCLE ═════
 app.whenReady().then(() => {
+    // ── Security Events (Regras 56 e 57) ──
+    app.on('web-contents-created', (event, contents) => {
+        contents.on('will-navigate', (event, navigationUrl) => {
+            const parsedUrl = new URL(navigationUrl);
+            if (parsedUrl.protocol !== 'file:') {
+                event.preventDefault();
+                console.warn('[SECURITY] Navegação bloqueada para:', navigationUrl);
+            }
+        });
+        contents.setWindowOpenHandler(({ url }) => {
+            console.warn('[SECURITY] Abertura de janela bloqueada para:', url);
+            return { action: 'deny' };
+        });
+        contents.on('before-input-event', (event, input) => {
+            if (input.control || input.meta) {
+                if (['i', 'r'].includes(input.key.toLowerCase())) event.preventDefault();
+            }
+            if (input.key === 'F12') event.preventDefault();
+        });
+    });
+
     setupIpcHandlers(); // Registra handlers UMA VEZ antes de tudo
     launch();
 
@@ -1349,4 +1472,8 @@ app.on('before-quit', () => {
 
 app.on('will-quit', () => {
     globalShortcut.unregisterAll();
+    try {
+        const runtimeJar = path.join(app.getPath('userData'), 'core_runtime.jar');
+        if (fs.existsSync(runtimeJar)) fs.unlinkSync(runtimeJar);
+    } catch(e) {}
 });
