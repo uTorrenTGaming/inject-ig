@@ -29,20 +29,20 @@ async function loadUsers() {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>
+            <td data-label="OS">
                 <div style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);width:36px;height:36px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
                     ${osSvg}
                 </div>
             </td>
-            <td>
+            <td data-label="Usuário">
                 <div class="user-info">
                     <img src="${user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg'}" class="avatar">
                     <div style="font-weight: 500;">${user.username}</div>
                 </div>
             </td>
-            <td><span class="hwid-tag">${user.hwid}</span></td>
-            <td>${statusHtml}</td>
-            <td>
+            <td data-label="Hardware ID"><span class="hwid-tag">${user.hwid}</span></td>
+            <td data-label="Status">${statusHtml}</td>
+            <td data-label="Ações">
                 <div class="actions">
                     <button class="btn-perm" onclick="banUser('${user.hwid}', 'permanent')">Ban Permanente</button>
                     <button class="btn-temp" onclick="banUser('${user.hwid}', '30days')">Ban 30 Dias</button>
@@ -105,15 +105,15 @@ async function loadLicenses() {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><span class="hwid-tag" style="user-select:all; cursor:copy;">${lic.key}</span></td>
-                <td>
+                <td data-label="Chave"><span class="hwid-tag" style="user-select:all; cursor:copy;">${lic.key}</span></td>
+                <td data-label="Hardware Vinculado">
                     ${lic.hwid_vinculado ? `<span class="hwid-tag">${lic.hwid_vinculado}</span>` : '<span style="color:var(--text-2); font-style:italic;">Aguardando ativação...</span>'}
                 </td>
-                <td>
+                <td data-label="Validade">
                     <span style="font-weight:600; font-size:12px;">${lic.duration_days ? lic.duration_days + ' Dias' : 'Permanente'}</span>
                 </td>
-                <td>${statusHtml}</td>
-                <td>
+                <td data-label="Status">${statusHtml}</td>
+                <td data-label="Ações">
                     <div class="actions">
                         <button class="btn-primary" style="background: rgba(10, 132, 255, 0.2);" onclick="generateInvoicePDF(${lic.id})">Baixar NFe</button>
                         <button class="${lic.is_active ? 'btn-temp' : 'btn-unban'}" onclick="revokeLicense(${lic.id})">${lic.is_active ? 'Suspender' : 'Restaurar'}</button>
