@@ -9,87 +9,110 @@
     }
 
     // 2. Fallback para Celular / Web (Capacitor)
-    console.log("[UniversalAPI] Electron não detectado. Usando Fallback Web/Mobile via Supabase CDN.");
+    console.log("[UniversalAPI] Electron não detectado. Usando Fallback Web/Mobile via Fetch API direto.");
 
-    // Chaves de acesso hardcoded temporárias (No build final de produção usar env variables do vite/webpack)
+    // Chaves
     const SUPABASE_URL = "https://grapcdpknhsdpaehsnmi.supabase.co";
     const SUPABASE_KEY = "sb_secret_CH8CZIK" + "_H27B7aK8hdozyQ_nyM3UJSg";
 
-    // Aguarda o carregamento do script do Supabase no index.html
-    let supabase = null;
-    
-    function getSupabase() {
-        if (!supabase && window.supabase) {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+    // Helper para fazer requests REST
+    async function supabaseFetch(table, method = 'GET', body = null, query = '') {
+        const headers = {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        };
+        
+        const url = `${SUPABASE_URL}/rest/v1/${table}${query}`;
+        const options = { method, headers };
+        if (body) options.body = JSON.stringify(body);
+
+        try {
+            const res = await fetch(url, options);
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || 'Erro no banco de dados');
+            }
+            // Retorna vazio se for DELETE e não houver representação
+            if (res.status === 204) return [];
+            return await res.json();
+        } catch (e) {
+            console.error("[Supabase Fetch Error]", e);
+            throw e;
         }
-        return supabase;
     }
 
     window.universalAPI = {
         getUsers: async () => {
-            const sb = getSupabase();
-            if (!sb) return [];
-            const { data, error } = await sb.from('users').select('*').order('last_login', { ascending: false });
-            if (error) console.error(error);
-            return data || [];
+            try {
+                // order by last_login desc
+                const data = await supabaseFetch('users', 'GET', null, '?order=last_login.desc');
+                return data || [];
+            } catch (e) { return []; }
         },
         banUser: async (hwid, type) => {
-            const sb = getSupabase();
-            if (!sb) return { success: false, message: 'Supabase not loaded' };
-            
-            let updateData = {};
-            if (type === 'permanent') {
-                updateData = { is_banned: true, ban_expires_at: null };
-            } else if (type === '30days') {
-                const date = new Date();
-                date.setDate(date.getDate() + 30);
-                updateData = { is_banned: true, ban_expires_at: date.toISOString() };
-            } else if (type === 'unban') {
-                updateData = { is_banned: false, ban_expires_at: null };
-            }
+            try {
+                let updateData = {};
+                if (type === 'permanent') {
+                    updateData = { is_banned: true, ban_expires_at: null };
+                } else if (type === '30days') {
+                    const date = new Date();
+                    date.setDate(date.getDate() + 30);
+                    updateData = { is_banned: true, ban_expires_at: date.toISOString() };
+                } else if (type === 'unban') {
+                    updateData = { is_banned: false, ban_expires_at: null };
+                }
 
-            const { error } = await sb.from('users').update(updateData).eq('hwid', hwid);
-            if (error) return { success: false, message: error.message };
-            return { success: true };
+                // URL encode hwid
+                const encodedHwid = encodeURIComponent(hwid);
+                await supabaseFetch('users', 'PATCH', updateData, `?hwid=eq.${encodedHwid}`);
+                return { success: true };
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
         },
         getLicenses: async () => {
-            const sb = getSupabase();
-            if (!sb) return [];
-            const { data, error } = await sb.from('licenses').select('*').order('created_at', { ascending: false });
-            if (error) console.error(error);
-            return data || [];
+            try {
+                const data = await supabaseFetch('licenses', 'GET', null, '?order=created_at.desc');
+                return data || [];
+            } catch (e) { return []; }
         },
         generateLicense: async (durationDays) => {
-            const sb = getSupabase();
-            if (!sb) return { success: false, message: 'Supabase not loaded' };
-            const key = 'IG-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
-                        Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
-                        Math.random().toString(36).substring(2, 6).toUpperCase();
-            
-            const { error } = await sb.from('licenses').insert([{ 
-                key: key, 
-                is_active: true, 
-                duration_days: durationDays || null 
-            }]);
-            if (error) return { success: false, message: error.message };
-            return { success: true, key };
+            try {
+                const key = 'IG-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
+                            Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
+                            Math.random().toString(36).substring(2, 6).toUpperCase();
+                
+                await supabaseFetch('licenses', 'POST', { 
+                    key: key, 
+                    is_active: true, 
+                    duration_days: durationDays || null 
+                });
+                return { success: true, key };
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
         },
         revokeLicense: async (id) => {
-            const sb = getSupabase();
-            if (!sb) return { success: false, message: 'Supabase not loaded' };
-            const { data: license } = await sb.from('licenses').select('is_active').eq('id', id).single();
-            if (!license) return { success: false, message: 'Licença não encontrada' };
-
-            const { error } = await sb.from('licenses').update({ is_active: !license.is_active }).eq('id', id);
-            if (error) return { success: false, message: error.message };
-            return { success: true };
+            try {
+                const data = await supabaseFetch('licenses', 'GET', null, `?id=eq.${id}&select=is_active`);
+                if (!data || data.length === 0) return { success: false, message: 'Licença não encontrada' };
+                
+                const license = data[0];
+                await supabaseFetch('licenses', 'PATCH', { is_active: !license.is_active }, `?id=eq.${id}`);
+                return { success: true };
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
         },
         deleteLicense: async (id) => {
-            const sb = getSupabase();
-            if (!sb) return { success: false, message: 'Supabase not loaded' };
-            const { error } = await sb.from('licenses').delete().eq('id', id);
-            if (error) return { success: false, message: error.message };
-            return { success: true };
+            try {
+                await supabaseFetch('licenses', 'DELETE', null, `?id=eq.${id}`);
+                return { success: true };
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
         }
     };
 })();
