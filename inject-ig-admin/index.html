@@ -209,7 +209,16 @@
             th, td { padding: 10px 12px; }
         }
         @media (max-width: 700px) {
-            body { flex-direction: column; padding-bottom: calc(55px + env(safe-area-inset-bottom)); }
+            body { 
+                height: auto; 
+                min-height: 100vh;
+                overflow-y: auto; 
+                overflow-x: hidden;
+                display: block; 
+                padding-bottom: calc(55px + env(safe-area-inset-bottom)); 
+                -webkit-overflow-scrolling: touch;
+            }
+            .main-view { display: block; }
             .sidebar { 
                 position: fixed; 
                 bottom: 0; left: 0; width: 100%; height: calc(55px + env(safe-area-inset-bottom)); 
@@ -229,6 +238,13 @@
             .nav-item svg { width: 20px; height: 20px; }
             
             .titlebar {
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                background: rgba(15, 15, 15, 0.8);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                border-bottom: 1px solid rgba(255,255,255,0.1);
                 padding-top: calc(env(safe-area-inset-top) + 10px);
                 padding-bottom: 15px;
                 padding-left: 15px;
@@ -253,7 +269,13 @@
                 margin: 0;
             }
             
-            .content { padding: 15px 12px 10px 12px; margin-bottom: 10px; max-width: 100vw; overflow-x: hidden; }
+            .content { 
+                padding: 15px 12px 10px 12px; 
+                margin-bottom: 10px; 
+                max-width: 100vw; 
+                overflow: visible; 
+                height: auto; 
+            }
             .content-header { margin-bottom: 15px; }
             .content-header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
             
