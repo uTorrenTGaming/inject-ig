@@ -105,7 +105,15 @@ async function loadLicenses() {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td data-label="Chave"><span class="hwid-tag" style="user-select:all; cursor:copy;">${lic.key}</span></td>
+                <td data-label="Chave">
+                    <div style="display:inline-flex; align-items:center; gap:8px;">
+                        <span class="hwid-tag" style="user-select:all;">${lic.key}</span>
+                        <button class="copy-btn" onclick="copyKey('${lic.key}')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Copiar
+                        </button>
+                    </div>
+                </td>
                 <td data-label="Hardware Vinculado">
                     ${lic.hwid_vinculado ? `<span class="hwid-tag">${lic.hwid_vinculado}</span>` : '<span style="color:var(--text-2); font-style:italic;">Aguardando ativação...</span>'}
                 </td>
@@ -132,7 +140,6 @@ async function generateLicense(days) {
     const res = await window.universalAPI.generateLicense(days);
     if (res.success) {
         await loadLicenses();
-        navigator.clipboard.writeText(res.key).catch(e => {});
         
         // Auto download the PDF for the newly generated license
         setTimeout(() => {
@@ -143,6 +150,18 @@ async function generateLicense(days) {
         }, 500);
     } else {
         alert("Erro ao gerar licença: " + res.message);
+    }
+}
+
+window.copyKey = function(key) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(key).then(() => {
+            alert("Chave copiada: " + key);
+        }).catch(err => {
+            alert("Erro ao copiar: " + err);
+        });
+    } else {
+        alert("Clipboard não suportado");
     }
 }
 
@@ -241,8 +260,26 @@ window.generateInvoicePDF = function(id) {
     doc.text(`Hash de Autenticação: ${hash}`, 20, startY + lh * 10.5);
     doc.text("Este documento serve como recibo oficial de licenciamento de software.", 20, startY + lh * 11.5);
     
-    // Save
-    doc.save(`NFe_ADM-IG_${lic.key}.pdf`);
+    // Save or Share Mobile
+    const fileName = `NFe_ADM-IG_${lic.key}.pdf`;
+    
+    try {
+        const pdfBlob = doc.output('blob');
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({
+                title: fileName,
+                files: [file]
+            }).catch(e => {
+                doc.save(fileName);
+            });
+        } else {
+            doc.save(fileName);
+        }
+    } catch (e) {
+        doc.save(fileName);
+    }
 }
 
 // Loop de atualização das licenças e usuários a cada 5 segundos
