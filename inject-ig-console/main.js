@@ -663,17 +663,21 @@ function setupIpcHandlers() {
             let scriptPath = '';
             let isPython = false;
             
+            const baseToolsDir = isPackaged 
+                ? path.join(process.resourcesPath, 'tools') 
+                : path.join(__dirname, 'tools');
+
             if (toolId === 'nmap_portscan') {
-                scriptPath = path.join(__dirname, 'tools', 'network', 'nmap_portscan.py');
+                scriptPath = path.join(baseToolsDir, 'network', 'nmap_portscan.py');
                 isPython = true;
             } else if (toolId === 'lfi_fuzzer' || toolId === 'sec_lfi') {
-                scriptPath = path.join(__dirname, 'tools', 'exploits', 'lfi_fuzzer.py');
+                scriptPath = path.join(baseToolsDir, 'exploits', 'lfi_fuzzer.py');
                 isPython = true;
             } else if (toolId === 'data_b64') {
-                scriptPath = path.join(__dirname, 'tools', 'utils', 'base64_codec.js');
+                scriptPath = path.join(baseToolsDir, 'utils', 'base64_codec.js');
                 isPython = false;
             } else {
-                scriptPath = path.join(__dirname, 'tools', 'universal_tool.py');
+                scriptPath = path.join(baseToolsDir, 'universal_tool.py');
                 isPython = true;
             }
 
