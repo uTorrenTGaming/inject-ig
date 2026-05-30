@@ -3,3 +3,8 @@ dist.nosync/
 .env
 .DS_Store
 
+# Pastas privadas — não expor no GitHub
+inject-ig-admin/
+inject-ig-console/
+
+

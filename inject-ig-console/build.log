@@ -1,4 +1,0 @@
-
-> inject-ig-console@2.0.0 build:all
-> electron-builder --mac --win --linux
-
