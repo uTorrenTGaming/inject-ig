@@ -2,6 +2,7 @@ const tbody = document.getElementById('user-table-body');
 
 async function loadUsers() {
     const users = await window.universalAPI.getUsers();
+    window.currentUsers = users;
     tbody.innerHTML = '';
     
     users.forEach(user => {
@@ -28,6 +29,8 @@ async function loadUsers() {
         }
 
         const tr = document.createElement('tr');
+        // Adiciona evento para abrir o Bottom Sheet no mobile
+        tr.setAttribute('onclick', `openUserSheet('${user.hwid}')`);
         tr.innerHTML = `
             <td data-label="OS">
                 <div style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);width:36px;height:36px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
@@ -104,6 +107,8 @@ async function loadLicenses() {
             }
 
             const tr = document.createElement('tr');
+            // Adiciona evento para abrir o Bottom Sheet no mobile
+            tr.setAttribute('onclick', `openLicenseSheet(${lic.id})`);
             tr.innerHTML = `
                 <td data-label="Chave">
                     <div style="display:inline-flex; align-items:center; gap:8px;">
@@ -285,3 +290,79 @@ window.generateInvoicePDF = function(id) {
 // Loop de atualização das licenças e usuários a cada 5 segundos
 setInterval(loadLicenses, 5000);
 setInterval(loadUsers, 5000);
+
+// ==========================================
+// LÓGICA DO BOTTOM SHEET (MOBILE)
+// ==========================================
+window.closeSheet = function() {
+    document.getElementById('sheet-overlay').classList.remove('active');
+    document.getElementById('bottom-sheet').classList.remove('active');
+}
+
+window.openUserSheet = function(hwid) {
+    if (window.innerWidth > 700) return; // Apenas no celular
+    const user = window.currentUsers?.find(u => u.hwid === hwid);
+    if (!user) return;
+    
+    const content = document.getElementById('sheet-content');
+    content.innerHTML = `
+        <div style="display:flex; align-items:center; gap:16px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:16px;">
+            <img src="${user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg'}" style="width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,0.1);">
+            <div>
+                <h3 style="font-size:18px; margin-bottom:4px;">${user.username}</h3>
+                <span style="font-size:12px; color:var(--text-2);">${user.hwid}</span>
+            </div>
+        </div>
+        <div>
+            <div style="font-size:12px; color:var(--text-2); margin-bottom:4px;">Sistema Operacional</div>
+            <div style="font-size:14px;">${user.os_type || 'Desconhecido'}</div>
+        </div>
+        <div class="actions">
+            <button class="btn-perm" onclick="banUser('${user.hwid}', 'permanent'); closeSheet();">Banir Permanentemente</button>
+            <button class="btn-temp" onclick="banUser('${user.hwid}', '30days'); closeSheet();">Suspender 30 Dias</button>
+            <button class="btn-unban" onclick="banUser('${user.hwid}', 'unban'); closeSheet();">Restaurar Acesso</button>
+        </div>
+    `;
+    document.getElementById('sheet-overlay').classList.add('active');
+    document.getElementById('bottom-sheet').classList.add('active');
+}
+
+window.openLicenseSheet = function(id) {
+    if (window.innerWidth > 700) return; // Apenas no celular
+    const lic = window.currentLicenses?.find(l => l.id === id);
+    if (!lic) return;
+    
+    const content = document.getElementById('sheet-content');
+    const statusText = lic.is_active ? (lic.hwid_vinculado ? 'Em Uso' : 'Livre') : 'Suspensa/Expirada';
+    
+    content.innerHTML = `
+        <div style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:16px;">
+            <h3 style="font-size:18px; margin-bottom:8px;">Detalhes da Licença</h3>
+            <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;">
+                <span style="font-family:monospace; font-size:14px;">${lic.key}</span>
+                <button class="copy-btn" onclick="copyKey('${lic.key}')" style="margin:0;">Copiar</button>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div>
+                <div style="font-size:12px; color:var(--text-2); margin-bottom:4px;">Status</div>
+                <div style="font-size:14px; font-weight:600;">${statusText}</div>
+            </div>
+            <div>
+                <div style="font-size:12px; color:var(--text-2); margin-bottom:4px;">Validade</div>
+                <div style="font-size:14px; font-weight:600;">${lic.duration_days ? lic.duration_days + ' Dias' : 'Permanente'}</div>
+            </div>
+        </div>
+        <div>
+            <div style="font-size:12px; color:var(--text-2); margin-bottom:4px;">Hardware Vinculado</div>
+            <div style="font-size:14px;">${lic.hwid_vinculado || '<span style="opacity:0.5;">Nenhum hardware ativado ainda.</span>'}</div>
+        </div>
+        <div class="actions">
+            <button class="btn-primary" style="background: rgba(10, 132, 255, 0.2);" onclick="generateInvoicePDF(${lic.id})">Baixar NFe (PDF)</button>
+            <button class="${lic.is_active ? 'btn-temp' : 'btn-unban'}" onclick="revokeLicense(${lic.id}); closeSheet();">${lic.is_active ? 'Suspender Licença' : 'Restaurar Licença'}</button>
+            <button class="btn-perm" onclick="deleteLicense(${lic.id}); closeSheet();">Excluir Chave</button>
+        </div>
+    `;
+    document.getElementById('sheet-overlay').classList.add('active');
+    document.getElementById('bottom-sheet').classList.add('active');
+}
