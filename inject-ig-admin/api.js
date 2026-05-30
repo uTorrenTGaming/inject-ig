@@ -9,7 +9,7 @@
     }
 
     // 2. Fallback para Celular / Web (Capacitor)
-    console.log("[UniversalAPI] Electron não detectado. Usando Fallback Web/Mobile via Fetch API direto.");
+    console.log("[UniversalAPI] Usando Fallback Web/Mobile via Capacitor Native HTTP.");
 
     // Chaves
     const SUPABASE_URL = "https://grapcdpknhsdpaehsnmi.supabase.co";
@@ -25,28 +25,36 @@
         };
         
         const url = `${SUPABASE_URL}/rest/v1/${table}${query}`;
-        const options = { method, headers };
-        if (body) options.body = JSON.stringify(body);
+        
+        // Use Capacitor Native HTTP if available to bypass Browser's Origin/CORS headers
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp) {
+            const options = { url, method, headers };
+            if (body) options.data = body;
+            
+            const response = await window.Capacitor.Plugins.CapacitorHttp.request(options);
+            if (response.status >= 400) {
+                throw new Error(response.data.message || 'Erro no banco de dados');
+            }
+            if (response.status === 204) return [];
+            return response.data;
+        } else {
+            // Fallback to fetch (MIGHT throw forbidden on browser if using service_role key)
+            const options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
 
-        try {
             const res = await fetch(url, options);
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.message || 'Erro no banco de dados');
             }
-            // Retorna vazio se for DELETE e não houver representação
             if (res.status === 204) return [];
             return await res.json();
-        } catch (e) {
-            console.error("[Supabase Fetch Error]", e);
-            throw e;
         }
     }
 
     window.universalAPI = {
         getUsers: async () => {
             try {
-                // order by last_login desc
                 const data = await supabaseFetch('users', 'GET', null, '?order=last_login.desc');
                 return data || [];
             } catch (e) { return []; }
@@ -64,7 +72,6 @@
                     updateData = { is_banned: false, ban_expires_at: null };
                 }
 
-                // URL encode hwid
                 const encodedHwid = encodeURIComponent(hwid);
                 await supabaseFetch('users', 'PATCH', updateData, `?hwid=eq.${encodedHwid}`);
                 return { success: true };
