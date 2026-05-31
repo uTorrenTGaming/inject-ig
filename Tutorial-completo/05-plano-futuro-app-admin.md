@@ -1,16 +1,17 @@
-# App Administrador Oculto (Roadmap)
+# Painel Administrativo (Roadmap)
 
-Toda a infraestrutura atual foi pensada para blindar a base de clientes do aplicativo principal e isolar o controle administrativo num ambiente totalmente segregado e seguro. O conceito é termos **dois softwares diferentes**.
+Toda a infraestrutura atual foi pensada para segregar o controle administrativo num ambiente totalmente isolado e seguro. O conceito é termos **dois softwares distintos**.
 
 ## 1. O App Cliente (Este repositório)
-Apenas permite acesso se a máquina for validada no PostgreSQL e não permite NENHUMA modificação do sistema de segurança através dele. Toda a lógica de controle (`/api/auth/admin`) foi DELETADA de seu código-fonte para impedir engenharia reversa.
+Permite acesso apenas se a máquina for validada no banco de dados. Toda a lógica de controle administrativo foi removida de seu código-fonte para impedir acesso indevido.
 
 ## 2. O App Administrador (A ser criado)
-Será um novo aplicativo Electron separado (outro repositório ou pasta oculta), projetado exclusivamente para você.
+Será um novo aplicativo Electron separado (outro repositório), projetado exclusivamente para gestão interna.
 Ele será o "Painel de Controle" que vai:
-- Ler os dados do PostgreSQL.
-- Alterar instantaneamente a coluna `is_banned` de usuários-alvo (Aplicando Hard-Bans via Placa-Mãe na mesma hora).
-- Permitir edição de avatares, logs e auditorias.
-- Bloquear computadores à força apertando um botão.
+- Ler os dados do banco de dados.
+- Alterar instantaneamente o status de acesso dos usuários (aplicando bloqueios por hardware ID).
+- Permitir edição de perfis, logs e auditorias.
+- Controlar o acesso de máquinas em tempo real.
 
-Como o banco de dados é um PostgreSQL central, qualquer "UPDATE" disparado pelo *App Administrador* será imediatamente sentido pelos *Apps Clientes* conectados!
+Como o banco de dados é central, qualquer alteração disparada pelo *App Administrador* será imediatamente aplicada nos *Apps Clientes* conectados.
+

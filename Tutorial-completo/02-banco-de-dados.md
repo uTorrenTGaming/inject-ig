@@ -9,7 +9,7 @@ O arquivo principal `main.js` estabelece a conexão instantaneamente antes de ex
 ```javascript
 await db.connect({ 
     user: 'postgres', 
-    password: '<Sua_Senha_Aqui>' // Por padrão 5127805124
+    password: process.env.DB_PASSWORD // Defina via .env — nunca exponha a senha aqui!
 });
 ```
 
