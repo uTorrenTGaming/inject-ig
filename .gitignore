@@ -4,7 +4,7 @@ dist.nosync/
 .DS_Store
 
 # Pastas privadas — não expor no GitHub
-# inject-ig-admin/
+inject-ig-admin/
 inject-ig-console/
 atualizacao/
 
