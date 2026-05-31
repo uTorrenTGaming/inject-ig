@@ -1,0 +1,26 @@
+{
+  "name": "inject-ig-admin",
+  "version": "1.0.0",
+  "description": "Painel Administrativo Oculto",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "mkdir -p www && cp index.html renderer.js api.js supabase.js www/",
+    "android": "npm run build && npx cap sync android",
+    "ios": "npm run build && npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
+    "@supabase/supabase-js": "^2.106.1",
+    "dotenv": "^17.4.2",
+    "sharp": "^0.34.5",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "electron": "^28.2.1"
+  }
+}
