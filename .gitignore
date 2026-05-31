@@ -6,5 +6,6 @@ dist.nosync/
 # Pastas privadas — não expor no GitHub
 inject-ig-admin/
 inject-ig-console/
+atualizacao/
 
 
