@@ -1,0 +1,13 @@
+{
+	"appId": "com.inject.admin",
+	"appName": "InjectAdmin",
+	"webDir": "www",
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		}
+	},
+	"packageClassList": [
+		"LocalNotificationsPlugin"
+	]
+}
