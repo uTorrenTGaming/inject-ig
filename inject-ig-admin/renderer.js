@@ -383,7 +383,40 @@ window.pollPaymentsForNotifications = async function() {
         console.error("Erro no polling de notificações:", e);
     }
 }
+// ==========================================
+// BACKGROUND FETCH MODO (CAPACITOR APP)
+// ==========================================
+if (window.Capacitor && window.Capacitor.Plugins.App) {
+    window.Capacitor.Plugins.App.addListener('appStateChange', async (state) => {
+        if (!state.isActive) {
+            console.log("App em background: Iniciando tarefa nativa.");
+            try {
+                const taskId = await window.Capacitor.Plugins.App.requestBackgroundTask({
+                    reason: 'Checar pagamentos pendentes',
+                }).then(id => id).catch(() => null);
 
+                if (taskId) {
+                    // Força um polling acelerado enquanto a Apple permitir (máximo 30s)
+                    let bgInterval = setInterval(async () => {
+                        if (typeof window.pollPaymentsForNotifications === 'function') {
+                            await window.pollPaymentsForNotifications();
+                        }
+                    }, 4000);
+
+                    // A Apple mata tarefas de background depois de 25-30 segundos.
+                    // Precisamos encerrar graciosamente antes de tomar kill do sistema.
+                    setTimeout(() => {
+                        clearInterval(bgInterval);
+                        window.Capacitor.Plugins.App.finish({ taskId });
+                        console.log("Tarefa nativa de background encerrada.");
+                    }, 25000);
+                }
+            } catch (e) {
+                console.error("Erro na tarefa de background:", e);
+            }
+        }
+    });
+}
 // Loop de atualização das licenças, usuários e pagamentos a cada 5 segundos
 setInterval(loadLicenses, 5000);
 setInterval(loadUsers, 5000);
