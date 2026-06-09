@@ -68,7 +68,7 @@ PLIST_PATH="../../../atualizacao-ios/exportOptions.plist"
 
 # Passo A: Arquivar o projeto (.xcarchive)
 echo -e "\n${CYAN}>>> Arquivando projeto Xcode...${NC}"
-xcodebuild -workspace App.xcworkspace \
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -workspace App.xcworkspace \
            -scheme App \
            -configuration Release \
            -archivePath "$ARCHIVE_PATH" \
@@ -82,7 +82,7 @@ xcodebuild -workspace App.xcworkspace \
 
 # Passo B: Exportar para .ipa
 echo -e "\n${CYAN}>>> Exportando para formato .ipa...${NC}"
-xcodebuild -exportArchive \
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -exportArchive \
            -archivePath "$ARCHIVE_PATH" \
            -exportOptionsPlist "$PLIST_PATH" \
            -exportPath "$EXPORT_PATH" \
