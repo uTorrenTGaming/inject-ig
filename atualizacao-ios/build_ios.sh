@@ -76,7 +76,7 @@ echo -e "\n${CYAN}>>> Arquivando projeto Xcode...${NC}"
            -allowProvisioningUpdates || {
                echo -e "${RED}❌ Falha na compilação do Xcode!${NC}"
                echo -e "DICA: O seu Mac provavelmente não está com uma conta Apple Developer logada."
-               echo -e "Abra o arquivo 'ios/App/App.xcworkspace' no Xcode, vá em 'Signing & Capabilities' e assine o projeto."
+               echo -e "Abra o arquivo 'ios/App/App.xcodeproj' no Xcode, vá em 'Signing & Capabilities' e assine o projeto."
                exit 1
            }
 

@@ -1,0 +1,13 @@
+{
+  "latitude": -23.5505,
+  "longitude": -46.6333,
+  "ip": "Local/Proxy",
+  "city": "São Paulo",
+  "country_name": "Brasil",
+  "org": "CyberLink ISP",
+  "poi": [
+    {"name": "Torre Celular Alpha", "lat": -23.5480, "lng": -46.6320, "type": "tower", "distance": "280m", "signal": "Forte"},
+    {"name": "Shopping XYZ WiFi", "lat": -23.5520, "lng": -46.6350, "type": "wifi", "distance": "320m", "signal": "Médio"},
+    {"name": "Estação Metrô (Câmera 4)", "lat": -23.5495, "lng": -46.6310, "type": "cctv", "distance": "150m", "signal": "Operacional"}
+  ]
+}

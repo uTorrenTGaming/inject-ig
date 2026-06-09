@@ -3,9 +3,7 @@ dist.nosync/
 .env
 .DS_Store
 
-# Pastas privadas — não expor no GitHub
-inject-ig-admin/
-inject-ig-console/
-atualizacao/
+# O código está sendo enviado ao Github para ser compilado via Actions
+
 
 

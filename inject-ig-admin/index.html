@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ADM - IG</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --surface: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-1: #ffffff;
+            --text-2: rgba(255,255,255,0.6);
+            --red: #ff3b30;
+            --green: #34c759;
+            --orange: #ff9f0a;
+            --blue: #0a84ff;
+            --glass-bg: rgba(255, 255, 255, 0.02);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --sidebar-width: 260px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: var(--bg); color: var(--text-1); overflow: hidden; display: flex; height: 100vh; position: relative; }
+        
+        /* ═══════════ LIQUID GLASS ═══════════ */
+        .ambient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: 0;
+            pointer-events: none;
+            animation: orb-float 12s infinite alternate ease-in-out;
+        }
+        @keyframes orb-float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(40px, -40px) scale(1.1); }
+        }
+        
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(40px) saturate(150%);
+            -webkit-backdrop-filter: blur(40px) saturate(150%);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            padding: 45px 15px 20px 15px; /* Added padding-top 45px for macOS traffic lights */
+            -webkit-app-region: drag;
+            position: relative;
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 10px 30px 10px;
+        }
+        
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #0a84ff, #5e5ce6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+        }
+
+        .brand-text {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-1); }
+        .nav-item.active { background: rgba(255, 255, 255, 0.1); color: var(--text-1); }
+
+        .main-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+            position: relative;
+            z-index: 10;
+            -webkit-app-region: drag;
+        }
+
+        .titlebar {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+        }
+
+        .titlebar h1 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .content {
+            padding: 30px;
+            flex: 1;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-app-region: no-drag;
+            background: transparent;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(30px) saturate(150%);
+            -webkit-backdrop-filter: blur(30px) saturate(150%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow-x: auto;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        table { width: 100%; min-width: 600px; border-collapse: collapse; table-layout: fixed; }
+        th, td { padding: 16px 20px; text-align: left; border-bottom: 1px solid var(--glass-border); }
+        th { font-size: 11px; text-transform: uppercase; color: var(--text-2); font-weight: 600; letter-spacing: 0.5px; background: rgba(255,255,255,0.01); }
+        td { font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: rgba(255, 255, 255, 0.02); }
+        
+        .user-info { display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--border); border: 1px solid rgba(255,255,255,0.1); }
+        
+        .os-icon { width: 22px; height: 22px; opacity: 0.9; display: flex; align-items: center; justify-content: center; }
+
+        .hwid-tag { font-family: "SF Mono", monospace; font-size: 12px; color: var(--text-2); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); display: inline-block; max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+        
+        .status { padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.3px; }
+        .status.active { background: rgba(50, 215, 75, 0.1); color: var(--green); border: 1px solid rgba(50, 215, 75, 0.2); }
+        .status.banned { background: rgba(255, 69, 58, 0.1); color: var(--red); border: 1px solid rgba(255, 69, 58, 0.2); }
+        .status.temp { background: rgba(255, 159, 10, 0.1); color: var(--orange); border: 1px solid rgba(255, 159, 10, 0.2); }
+
+        .actions { display: flex; gap: 8px; }
+        button {
+            padding: 6px 12px;
+            border-radius: 6px; /* Apple native button radius */
+            border: none;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn-perm { background: rgba(255, 69, 58, 0.1); color: var(--red); border: 1px solid rgba(255, 69, 58, 0.2); }
+        .btn-perm:hover { background: var(--red); color: white; }
+        
+        .btn-temp { background: rgba(255, 159, 10, 0.1); color: var(--orange); border: 1px solid rgba(255, 159, 10, 0.2); }
+        .btn-temp:hover { background: var(--orange); color: white; }
+        
+        .btn-unban { background: rgba(50, 215, 75, 0.1); color: var(--green); border: 1px solid rgba(50, 215, 75, 0.2); }
+        .btn-unban:hover { background: var(--green); color: white; }
+        
+        .btn-primary { background: var(--blue); color: white; box-shadow: 0 2px 10px rgba(10, 132, 255, 0.3); }
+        .btn-primary:hover { background: #007aff; }
+
+        /* View Navigation */
+        .view { display: none !important; }
+        .view.active { display: block !important; }
+        
+        .settings-card { padding: 24px; border-bottom: 1px solid var(--glass-border); }
+        .settings-card:last-child { border-bottom: none; }
+        .settings-card h3 { font-size: 16px; margin-bottom: 6px; font-weight: 600; }
+        .settings-card p { font-size: 13px; color: var(--text-2); margin-bottom: 20px; line-height: 1.5; }      
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .3s; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 1px; bottom: 1px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        input:checked + .slider { background-color: var(--green); border-color: transparent; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        @media (max-width: 900px) {
+            .content { padding: 15px; }
+            .sidebar { width: 200px; }
+            th, td { padding: 10px 12px; }
+        }
+        @media (max-width: 700px) {
+            body { 
+                height: auto; 
+                min-height: 100vh;
+                overflow-y: auto; 
+                overflow-x: hidden;
+                display: block; 
+                padding-bottom: calc(55px + env(safe-area-inset-bottom)); 
+                -webkit-overflow-scrolling: touch;
+            }
+            .main-view { display: block; }
+            .sidebar { 
+                position: fixed; 
+                bottom: 0; left: 0; width: 100%; height: calc(55px + env(safe-area-inset-bottom)); 
+                border-right: none; border-top: 1px solid rgba(255,255,255,0.15); 
+                padding: 0 10px env(safe-area-inset-bottom) 10px; 
+                display: flex; flex-direction: row; 
+                justify-content: center; align-items: center; 
+                background: rgba(15, 15, 15, 0.75);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                z-index: 100;
+            }
+            .brand { display: none; }
+            .nav-menu { flex-direction: row; width: 100%; justify-content: space-around; padding: 0; margin: 0; }
+            .nav-item { flex-direction: column; padding: 4px 0; gap: 2px; font-size: 9px; border-radius: 12px; margin: 0; }
+            .nav-item.active { background: rgba(10, 132, 255, 0.15); color: #0a84ff; }
+            .nav-item svg { width: 20px; height: 20px; }
+            
+            .titlebar {
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                background: rgba(15, 15, 15, 0.8);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                padding-top: calc(env(safe-area-inset-top) + 10px);
+                padding-bottom: 15px;
+                padding-left: 15px;
+                padding-right: 15px;
+                height: auto;
+                flex-direction: column;
+                gap: 12px;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+            .titlebar h1 { 
+                font-size: 18px; 
+                white-space: normal;
+                line-height: 1.2;
+            }
+            .titlebar button {
+                width: auto;
+                min-width: 150px;
+                font-size: 13px;
+                padding: 8px 16px;
+                margin: 0;
+            }
+            
+            .content { 
+                padding: 15px 12px 10px 12px; 
+                margin-bottom: 10px; 
+                max-width: 100vw; 
+                overflow: visible; 
+                height: auto; 
+            }
+            .content-header { margin-bottom: 15px; }
+            .content-header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+            
+            .table-container { border-radius: 0; background: transparent; backdrop-filter: none; border: none; overflow-x: hidden; }
+            table, thead, tbody { display: block; width: 100%; }
+            thead tr { display: none; }
+            
+            /* Sleek Minimalist List Items */
+            tr { 
+                margin-bottom: 8px; 
+                border-radius: 12px; 
+                background: rgba(30, 30, 30, 0.4); 
+                backdrop-filter: blur(25px); 
+                -webkit-backdrop-filter: blur(25px); 
+                border: 1px solid rgba(255,255,255,0.05); 
+                padding: 12px 16px; 
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                cursor: pointer;
+            }
+            
+            td { 
+                border: none; 
+                padding: 0; 
+                display: flex; 
+                align-items: center; 
+                font-size: 14px;
+            }
+            
+            /* Ocultar elementos desnecessários na lista (aparecerão no Modal) */
+            td::before { display: none !important; }
+            
+            /* Access Table: Esconder OS, HWID, Ações */
+            #user-table-body td:nth-child(1),
+            #user-table-body td:nth-child(3),
+            #user-table-body td:nth-child(5) { display: none !important; }
+            
+            /* License Table: Esconder HWID, Tipo, Ações */
+            #license-table-body td:nth-child(2),
+            #license-table-body td:nth-child(3),
+            #license-table-body td:nth-child(5) { display: none !important; }
+            
+            /* Bottom Sheet Modal Styles */
+            .sheet-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5);
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+                z-index: 1000;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            .sheet-overlay.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .bottom-sheet {
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                background: rgba(20, 20, 22, 0.95);
+                backdrop-filter: blur(30px) saturate(150%);
+                -webkit-backdrop-filter: blur(30px) saturate(150%);
+                border-top-left-radius: 24px;
+                border-top-right-radius: 24px;
+                border-top: 1px solid rgba(255,255,255,0.1);
+                padding: 24px;
+                padding-bottom: calc(24px + env(safe-area-inset-bottom));
+                z-index: 1001;
+                transform: translateY(100%);
+                transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            }
+            .bottom-sheet.active {
+                transform: translateY(0);
+            }
+            .sheet-handle {
+                width: 40px; height: 5px;
+                background: rgba(255,255,255,0.2);
+                border-radius: 3px;
+                margin: 0 auto 20px auto;
+            }
+            .sheet-content {
+                display: flex; flex-direction: column; gap: 16px;
+            }
+            .sheet-content .actions {
+                display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
+            }
+            .sheet-content .actions button { width: 100%; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 12px; }
+            
+            .card { border-radius: 16px; background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+        }
+
+        /* Copy Button specific styling */
+        .copy-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+        }
+        .copy-btn:hover { background: rgba(255,255,255,0.2); }
+        .copy-btn svg { width: 12px; height: 12px; }
+    </style>
+</head>
+<body>
+    <div class="ambient-orb" style="width: 500px; height: 500px; background: rgba(10, 132, 255, 0.3); top: -150px; left: -150px;"></div>
+    <div class="ambient-orb" style="width: 600px; height: 600px; background: rgba(48, 209, 88, 0.2); bottom: -200px; right: -200px; animation-delay: -5s; animation-direction: alternate-reverse;"></div>
+    <div class="ambient-orb" style="width: 400px; height: 400px; background: rgba(191, 90, 242, 0.2); top: 30%; left: 30%; animation-delay: -2s;"></div>
+
+    <div class="sidebar">
+        <div class="brand">
+            <div class="brand-icon" style="background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="7" y1="5" x2="7" y2="19"></line>
+                    <path d="M19 11V9a4 4 0 0 0-4-4h-2a4 4 0 0 0-4 4v6a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4v-2h-3"></path>
+                </svg>
+            </div>
+            <div class="brand-text">ADM - IG</div>
+        </div>
+        
+        <div class="nav-menu">
+            <div class="nav-item active" onclick="switchTab('access')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Controle de Acesso
+            </div>
+            <div class="nav-item" onclick="switchTab('licenses')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                Licenças DRM
+            </div>
+            <div class="nav-item" onclick="switchTab('payments')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+                Pagamentos Pendentes
+            </div>
+            <div class="nav-item" onclick="switchTab('settings')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Configurações
+            </div>
+            <div class="nav-item" onclick="switchTab('tickets')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                Suporte / Tickets
+            </div>
+        </div>
+    </div>
+
+    <div class="main-view">
+        <div class="titlebar">
+            <h1 id="view-title">Controle de Acesso</h1>
+            <button class="btn-primary" onclick="loadUsers()" style="-webkit-app-region: no-drag;">
+                <span style="display:flex;align-items:center;gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.44-5.44M21.5 8l-5.44 5.44"></path></svg>
+                    Sincronizar DB
+                </span>
+            </button>
+        </div>
+        
+        <div class="content">
+            <!-- Access View -->
+            <div id="view-access" class="view active">
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">OS</th>
+                                <th style="width: 25%;">Usuário</th>
+                                <th style="width: 25%;">Hardware ID</th>
+                                <th style="width: 15%;">Status</th>
+                                <th style="width: 35%;">Ações Táticas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body">
+                            <!-- Injetado pelo renderer -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Licenses View -->
+            <div id="view-licenses" class="view">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button class="btn-primary" onclick="generateLicense(null)">+ Chave Permanente</button>
+                    <button class="btn-primary" style="background: rgba(10, 132, 255, 0.2);" onclick="generateLicense(1)">+ Chave 1 Dia</button>
+                    <button class="btn-primary" style="background: rgba(10, 132, 255, 0.2);" onclick="generateLicense(30)">+ Chave 30 Dias</button>
+                    <button class="btn-primary" style="background: rgba(10, 132, 255, 0.2);" onclick="generateLicense(90)">+ Chave 90 Dias</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 25%;">Chave (Serial)</th>
+                                <th style="width: 25%;">Hardware Vinculado</th>
+                                <th style="width: 15%;">Tipo</th>
+                                <th style="width: 15%;">Status / Vencimento</th>
+                                <th style="width: 20%;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="license-table-body">
+                            <!-- Injetado pelo renderer -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payments View -->
+            <div id="view-payments" class="view">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <p style="color: var(--text-2); font-size: 14px;">Aprove os pagamentos via Mercado Pago aqui. O acesso será liberado no PC do cliente automaticamente.</p>
+                    <button class="btn-primary" onclick="loadPendingPayments()">Atualizar Lista</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 10%;">ID</th>
+                                <th style="width: 25%;">Nick</th>
+                                <th style="width: 20%;">Plano</th>
+                                <th style="width: 25%;">Data</th>
+                                <th style="width: 20%;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment-table-body">
+                            <!-- Injetado pelo renderer -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="view-settings" class="view settings-view">
+                <div class="card">
+                    <div class="settings-card">
+                        <h3>Monitoramento Global</h3>
+                        <p>Ativar telemetria em tempo real de todos os nós conectados.</p>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-card">
+                        <h3>Lockdown Mode</h3>
+                        <p>Bloqueia a entrada de novos HWIDs não listados na base de dados (Whitelist Strict).</p>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-card">
+                        <h3>Integração com Supabase</h3>
+                        <p>A API Key está configurada remotamente no cluster protegido.</p>
+                        <button class="btn-primary" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">Acessar Logs do Banco</button>
+                    </div>
+                    <div class="settings-card">
+                        <h3>Identificação de Sistemas (Telemetria)</h3>
+                        <p style="margin-bottom: 16px;">Legenda dos vetores nativos utilizados para identificar o ecossistema de cada usuário infiltrado.</p>
+                        <div style="display: flex; gap: 15px;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; flex: 1;">
+                                <svg style="width: 28px; height: 28px; color: #00a4ef;" viewBox="0 0 24 24" fill="currentColor"><path d="M22 2v20l-9.5-1.34v-17.3zM11.5 3.63l-9.5 1.34v14l9.5 1.34z"/></svg>
+                                <span style="font-size: 10px; font-weight: 600; color: var(--text-2);">Windows</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; flex: 1;">
+                                <svg style="width: 28px; height: 28px; color: #fff;" viewBox="0 0 24 24" fill="currentColor"><path d="M16.36 10.96C16.36 8.52 18.23 7.37 18.33 7.31C17.18 5.64 15.34 5.42 14.73 5.39C13.2 5.23 11.75 6.27 10.96 6.27C10.17 6.27 8.98 5.39 7.73 5.41C6.11 5.43 4.61 6.35 3.78 7.79C2.08 10.74 3.35 15.09 5.01 17.48C5.83 18.66 6.78 19.98 8.04 19.93C9.25 19.88 9.72 19.14 11.19 19.14C12.65 19.14 13.07 19.93 14.34 19.91C15.65 19.88 16.48 18.69 17.29 17.5C18.23 16.14 18.62 14.81 18.64 14.75C18.6 14.73 16.36 13.9 16.36 10.96ZM11.17 4.19C11.83 3.38 12.28 2.27 12.16 1.15C11.18 1.19 10.02 1.8 9.34 2.6C8.74 3.3 8.21 4.44 8.36 5.54C9.45 5.62 10.51 5.02 11.17 4.19Z"/></svg>
+                                <span style="font-size: 10px; font-weight: 600; color: var(--text-2);">macOS</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; flex: 1;">
+                                <svg style="width: 28px; height: 28px; color: #f5a900;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C10.3 2 9 3.3 9 5c0 1.5 1.1 2.8 2.5 3V12c-2.5 0-4.5 2-4.5 4.5S9 21 11.5 21 16 19 16 16.5V8c1.4-.2 2.5-1.5 2.5-3 0-1.7-1.3-3-3-3zm-1 8h2v6.5c0 1.4-1.1 2.5-2.5 2.5S8 17.9 8 16.5c0-1.2.9-2.2 2-2.4V10zm2.5-6C14.3 4 15 4.7 15 5.5S14.3 7 13.5 7 12 6.3 12 5.5 12.7 4 13.5 4zm-3 0C11.3 4 12 4.7 12 5.5S11.3 7 10.5 7 9 6.3 9 5.5 9.7 4 10.5 4z"/></svg>
+                                <span style="font-size: 10px; font-weight: 600; color: var(--text-2);">Linux</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- View: Tickets (Chat em Tempo Real) -->
+            <div id="view-tickets" class="view">
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>Enviar Mensagem a Todos os Usuários</h3>
+                    <p style="margin-bottom: 12px; font-size: 12px; color: var(--text-2);">Esta mensagem aparecerá na aba "Atualizações" de todos os clientes do Inject-IG.</p>
+                    <textarea id="admin-message-input" rows="3" placeholder="Digite o aviso ou mensagem global..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: #fff; font-family: inherit; font-size: 13px; resize: none; margin-bottom: 12px; outline: none; transition: border-color 0.2s;" autocomplete="off" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
+                    <button class="btn btn-primary" id="btn-send-admin-msg">Enviar Aviso Global</button>
+                </div>
+
+                <div class="card" style="height: 500px; display: flex; flex-direction: row; overflow: hidden; padding: 0;">
+                    <!-- ADMIN SIDEBAR -->
+                    <div id="suporte-admin-sidebar" style="width: 250px; border-right: 1px solid var(--glass-border); overflow-y: auto; background: rgba(0,0,0,0.2); display: flex; flex-direction: column;">
+                        <div style="padding: 15px; font-weight: 600; font-size: 13px; color: var(--text-2); border-bottom: 1px solid var(--glass-border);">Chats Ativos</div>
+                        <div id="suporte-admin-hwids" style="display: flex; flex-direction: column;">
+                            <div style="padding: 15px; color: var(--text-3); font-size: 12px;">Carregando...</div>
+                        </div>
+                    </div>
+                    <!-- ADMIN CHAT AREA -->
+                    <div id="suporte-admin-chat-area" style="flex: 1; display: flex; flex-direction: column; position: relative;">
+                        <div id="suporte-admin-header" style="padding: 15px; border-bottom: 1px solid var(--glass-border); font-weight: 600; font-size: 14px; color: #fff; background: rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;">
+                            <span>Selecione um chat</span>
+                            <span id="suporte-admin-status" style="font-size: 11px; color: var(--green); display: none;">Online</span>
+                        </div>
+                        <div id="suporte-admin-messages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: rgba(0,0,0,0.05);">
+                            <div style="text-align: center; color: var(--text-3); font-size: 12px; margin: auto;">Nenhum chat selecionado</div>
+                        </div>
+                        <div style="padding: 15px 20px; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.3);">
+                            <form id="suporte-admin-form" style="display: flex; gap: 10px; margin: 0;">
+                                <input type="text" id="suporte-admin-input" placeholder="Responder cliente..." disabled style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 14px; font-size: 14px; color: #fff; outline: none; transition: border-color 0.2s; opacity: 0.5;" autocomplete="off" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                                <button type="submit" id="suporte-admin-submit-btn" class="btn btn-primary" disabled style="padding: 0 20px; border-radius: 12px; font-weight: 600; opacity: 0.5;">Enviar</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Bottom Sheet Modal -->
+    <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+    <div class="bottom-sheet" id="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-content" id="sheet-content">
+            <!-- Injetado via JS -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="api.js"></script>
+    <script src="renderer.js"></script>
+    <script>
+        function switchTab(tabId) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            
+            if (tabId === 'access') {
+                document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+                document.getElementById('view-access').classList.add('active');
+                document.getElementById('view-title').innerText = 'Controle de Acesso';
+            } else if (tabId === 'licenses') {
+                document.querySelector('.nav-item:nth-child(2)').classList.add('active');
+                document.getElementById('view-licenses').classList.add('active');
+                document.getElementById('view-title').innerText = 'Gerenciador de Licenças (DRM)';
+                if (typeof loadLicenses === 'function') loadLicenses();
+            } else if (tabId === 'payments') {
+                document.querySelector('.nav-item:nth-child(3)').classList.add('active');
+                document.getElementById('view-payments').classList.add('active');
+                document.getElementById('view-title').innerText = 'Pagamentos Pendentes';
+                if (typeof loadPendingPayments === 'function') loadPendingPayments();
+            } else if (tabId === 'settings') {
+                document.querySelector('.nav-item:nth-child(4)').classList.add('active');
+                document.getElementById('view-settings').classList.add('active');
+                document.getElementById('view-title').innerText = 'Configurações Globais';
+            } else if (tabId === 'tickets') {
+                document.querySelector('.nav-item:nth-child(5)').classList.add('active');
+                document.getElementById('view-tickets').classList.add('active');
+                document.getElementById('view-title').innerText = 'Suporte & Tickets';
+                if (typeof loadTickets === 'function') loadTickets();
+            }
+        }
+    </script>
+</body>
+</html>

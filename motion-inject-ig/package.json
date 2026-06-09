@@ -1,0 +1,21 @@
+{
+  "name": "motion-inject-ig",
+  "version": "1.0.0",
+  "description": "Inject-IG Motion Graphics Video",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render src/index.ts Main out.mp4",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "typescript": "^5.0.0"
+  }
+}
