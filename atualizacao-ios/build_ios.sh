@@ -46,6 +46,11 @@ git -c credential.helper= push https://$GH_TOKEN@github.com/uTorrenTGaming/injec
 
 # 4. Sincroniza o Capacitor (Web -> iOS)
 echo -e "\n${GREEN}[3/5] 🔄 Sincronizando Código Web com Projeto Nativo iOS...${NC}"
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+    export NVM_DIR="$HOME/.nvm"
+    source "$NVM_DIR/nvm.sh"
+    nvm use 22 || nvm install 22
+fi
 npm run ios
 
 # 5. Compilação Xcode para .ipa
