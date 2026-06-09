@@ -59,8 +59,7 @@ echo "Isso pode levar alguns minutos. O Xcode está construindo os binários."
 
 cd ios/App
 
-# Instala/Atualiza os Pods necessários do iOS
-pod install
+# (Capacitor usa Swift Package Manager automaticamente, pod install não é necessário)
 
 # Define as pastas
 ARCHIVE_PATH="build/App.xcarchive"
