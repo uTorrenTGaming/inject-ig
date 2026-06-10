@@ -66,43 +66,8 @@ class RadarApp {
                 this.logMessage(`📍 Localização base (Fallback Offline Ativado)`, "var(--amber)");
             }
             
-            // Verifica se o Leaflet foi carregado
-            if (typeof L === 'undefined') {
-                this.logMessage("⚠️ Erro: Biblioteca de Mapas (Leaflet) não foi carregada.", "var(--red)");
-                return;
-            }
-            
-            // Inicializa o Mapa
-            this.map = L.map(this.containerId, {
-                zoomControl: false,
-                attributionControl: false
-            }).setView([this.myLat, this.myLng], 16);
-            
-            // Tema Dark Cyberpunk (CartoDB Dark Matter)
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-                subdomains: 'abcd'
-            }).addTo(this.map);
-            
-            // Ícone do Alvo (Pulsante)
-            const targetHtml = `
-                <div style="width: 24px; height: 24px; background: rgba(255, 159, 10, 0.4); border: 2px solid var(--amber); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px var(--amber);">
-                    <div style="width: 8px; height: 8px; background: var(--amber); border-radius: 50%;"></div>
-                </div>
-                <style>
-                    @keyframes mapPulse { 0% { transform: scale(0.9); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
-                </style>
-            `;
-            
-            const targetIcon = L.divIcon({
-                className: 'target-marker',
-                html: targetHtml,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
-            
-            L.marker([this.myLat, this.myLng], { icon: targetIcon }).addTo(this.map)
-                .bindPopup('<div style="color:#000; font-family:monospace; font-weight:bold; font-size: 12px; padding: 4px;">ALVO RASTREADO</div>');
+            // Leaflet disabled in favor of Cobe WebGL Globe
+            this.map = null;
                 
             // Inicia o rastreamento dos POIs
             this.logMessage("Analisando satélites e triangulação WiFi...", "var(--text-3)");
@@ -122,26 +87,6 @@ class RadarApp {
             
             // Simula delay de triangulação
             await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000));
-            
-            // Ícone do POI
-            const poiIcon = L.divIcon({
-                className: 'poi-marker',
-                html: '<div style="width: 14px; height: 14px; background: rgba(10, 132, 255, 0.4); border: 2px solid var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent);"></div>',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
-            });
-            
-            L.marker([poi.lat, poi.lng], { icon: poiIcon }).addTo(this.map)
-                .bindPopup(`<div style="color:#000; font-family:monospace; font-weight:bold; font-size: 11px;">${poi.name}</div>`);
-                
-            // Linha que liga o alvo ao POI
-            L.polyline([[this.myLat, this.myLng], [poi.lat, poi.lng]], {
-                color: 'var(--accent)',
-                weight: 2,
-                opacity: 0.6,
-                dashArray: '5, 10',
-                lineCap: 'square'
-            }).addTo(this.map);
             
             this.logPOIConnection(poi);
         }

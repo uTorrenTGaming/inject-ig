@@ -4,8 +4,20 @@ class GhostAIAssistant {
             role: 'system', 
             content: 'Você é o Assistente Fantasma, uma Inteligência Artificial de elite focada em cibersegurança, forense digital e pentest. Você está integrado ao software inject-ig e roda de forma offline e invisível. REGRA CRÍTICA E ABSOLUTA: Você deve responder TODAS as interações EXCLUSIVAMENTE em Português do Brasil (PT-BR). Sob nenhuma circunstância use inglês ou outras línguas.'
         };
-        this.messages = [this.systemPrompt];
-        this.modelName = 'llama3'; // Default fallback
+        
+        // Load persistent memory
+        const savedMemory = localStorage.getItem('ghost_ai_memory');
+        if (savedMemory) {
+            try {
+                this.messages = JSON.parse(savedMemory);
+            } catch (e) {
+                this.messages = [this.systemPrompt];
+            }
+        } else {
+            this.messages = [this.systemPrompt];
+        }
+
+        this.modelName = 'phi3'; // Default fallback (pulled by installer)
         this.isChecking = false;
         
         // DOM Elements
@@ -20,16 +32,22 @@ class GhostAIAssistant {
         this.btnClear = document.getElementById('btn-ai-clear');
         
         this.initEvents();
+        this.restoreVisualHistory();
         
-        // Setup observer para checar engine quando a view for aberta
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.target.id === 'view-ai' && mutation.target.classList.contains('active')) {
-                    this.checkEngine();
-                }
-            });
-        });
-        if (this.viewAi) observer.observe(this.viewAi, { attributes: true, attributeFilter: ['class'] });
+        // Sempre checa a engine no boot
+        setTimeout(() => this.checkEngine(), 500);
+    }
+    
+    restoreVisualHistory() {
+        // Pula o systemPrompt (índice 0)
+        for (let i = 1; i < this.messages.length; i++) {
+            const msg = this.messages[i];
+            this.appendMessage(msg.role, msg.content, false);
+        }
+    }
+    
+    saveMemory() {
+        localStorage.setItem('ghost_ai_memory', JSON.stringify(this.messages));
     }
     
     initEvents() {
@@ -51,9 +69,10 @@ class GhostAIAssistant {
         
         this.btnClear.addEventListener('click', () => {
             this.messages = [this.systemPrompt];
+            this.saveMemory();
             this.chatHistory.innerHTML = `
                 <div class="ai-msg ai-msg-bot" style="align-self: flex-start; background: rgba(255, 255, 255, 0.05); padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 4px; max-width: 80%; color: var(--text-1); font-size: 14px; line-height: 1.5; font-family: -apple-system, sans-serif; border: 1px solid rgba(255,255,255,0.05);">
-                    Memória apagada. Sessão limpa iniciada. Estou pronto.
+                    Memória neural formatada com sucesso. Estou pronto para uma nova operação.
                 </div>
             `;
         });
@@ -150,9 +169,11 @@ class GhostAIAssistant {
                 const reply = res.message.content;
                 this.messages.push({ role: 'assistant', content: reply });
                 this.appendMessage('assistant', reply);
+                this.saveMemory(); // Persist AI state
             } else {
                 this.appendMessage('system', 'Erro de conexão fantasma: ' + res.error);
                 this.messages.pop(); // Remove a última mensagem falha da memória
+                this.saveMemory(); // Persist state removal
             }
         } catch (e) {
             this.removeLoader(loaderId);

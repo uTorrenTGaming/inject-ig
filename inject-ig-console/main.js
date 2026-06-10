@@ -22,6 +22,8 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // ═════ ACELERAÇÃO GRÁFICA EXTREMA ═════
+// Força o MacOS e Windows a usarem a GPU Dedicada (Ex: AMD Radeon) em vez da Integrada (Intel)
+app.commandLine.appendSwitch('force_high_performance_gpu');
 // app.commandLine.appendSwitch('enable-gpu-rasterization');
 // app.commandLine.appendSwitch('enable-zero-copy');
 // app.commandLine.appendSwitch('ignore-gpu-blocklist');
@@ -243,9 +245,9 @@ function createMainWindow() {
         width: 850,
         height: 600,
         show: true, // Mostra imediatamente para exibir o splash embutido
-        backgroundColor: '#00000000',
-        transparent: true,
-        frame: false,
+        backgroundColor: '#1c1c1e',
+        transparent: false,
+        frame: true,
         hasShadow: true,
         alwaysOnTop: false,
         resizable: true,
@@ -437,7 +439,7 @@ function setupIpcHandlers() {
 
             let cmd = '';
             if (process.platform === 'darwin') {
-                cmd = `cd "${userDataPath}" && curl -L https://github.com/ollama/ollama/releases/latest/download/Ollama-darwin.zip -o ollama.zip && unzip -o -j ollama.zip Ollama.app/Contents/Resources/ollama -d ollama_bin && chmod +x ollama_bin/ollama && rm ollama.zip`;
+                cmd = `cd "${userDataPath}" && rm -rf ollama_bin Ollama.app && curl -L https://github.com/ollama/ollama/releases/latest/download/Ollama-darwin.zip -o ollama.zip && unzip -q -o ollama.zip "Ollama.app/Contents/Resources/*" && mv Ollama.app/Contents/Resources ollama_bin && rm -rf Ollama.app ollama.zip && xattr -cr ollama_bin && chmod +x ollama_bin/ollama`;
             } else if (process.platform === 'linux') {
                 cmd = `cd "${userDataPath}" && curl -L https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64 -o ollama_bin/ollama && chmod +x ollama_bin/ollama`;
             } else {
@@ -482,6 +484,7 @@ function setupIpcHandlers() {
 
     ipcMain.handle('ai.sendMessage', async (event, modelName, messages) => {
         try {
+            console.log(`[OLLAMA DEBUG] Sending to ${modelName}:`, JSON.stringify(messages));
             const res = await fetch('http://127.0.0.1:11434/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -495,8 +498,11 @@ function setupIpcHandlers() {
                 const data = await res.json();
                 return { success: true, message: data.message };
             }
-            return { success: false, error: 'Ollama API Error' };
+            const errText = await res.text();
+            console.error('[OLLAMA ERROR]', errText);
+            return { success: false, error: 'Ollama API Error: ' + errText };
         } catch (e) {
+            console.error('[OLLAMA FETCH ERROR]', e.message);
             return { success: false, error: e.message };
         }
     });
@@ -837,14 +843,30 @@ function setupIpcHandlers() {
 
     ipcMain.handle('c2.sendChatMessage', async (event, text, model) => {
         try {
+            const p = getChatHistoryPath();
+            let history = [];
+            if (fs.existsSync(p)) { try { history = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) {} }
+            
+            // Build LLM context array (max last 20 messages to prevent token limits)
+            const llmMessages = [];
+            const recentHistory = history.slice(-20);
+            for (const msg of recentHistory) {
+                // OpenAI/Groq API expects 'user' or 'assistant'
+                const role = msg.role === 'user' ? 'user' : 'assistant';
+                llmMessages.push({ role, content: msg.content });
+            }
+            // Append current message
+            llmMessages.push({ role: 'user', content: text });
+
             let replyText = 'Não consegui entender.';
             let respondingModelName = 'Agente IG';
+            
             if (model === 'groq-llama3') {
                 if (!process.env.GROQ_API_KEY) return { text: '⚠️ GROQ_API_KEY não encontrada no .env.', modelName: 'Sistema' };
                 const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: text }] })
+                    body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: llmMessages })
                 });
                 const json = await res.json();
                 replyText = json.choices?.[0]?.message?.content || 'Erro na resposta do Groq.';
@@ -856,7 +878,7 @@ function setupIpcHandlers() {
                 const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${process.env.GH_TOKEN}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: actualModel, messages: [{role: 'user', content: text}] })
+                    body: JSON.stringify({ model: actualModel, messages: llmMessages })
                 });
                 const json = await res.json();
                 replyText = json.choices?.[0]?.message?.content || `Erro na resposta do GitHub Models (${actualModel}).`;
@@ -866,7 +888,7 @@ function setupIpcHandlers() {
                 const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://github.com/uTorrenTGaming/inject-ig', 'X-Title': 'Inject-IG Agent' },
-                    body: JSON.stringify({ model, messages: [{ role: 'user', content: text }] })
+                    body: JSON.stringify({ model, messages: llmMessages })
                 });
                 const json = await res.json();
                 replyText = json.choices?.[0]?.message?.content || `Erro na resposta do OpenRouter (${model}).`;
@@ -877,7 +899,8 @@ function setupIpcHandlers() {
                     const res = await fetch(customUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CUSTOM_API_KEY || ''}` },
-                        body: JSON.stringify({ message: text })
+                        // For custom API, we just send the text, but could send history if supported
+                        body: JSON.stringify({ message: text, history: llmMessages })
                     });
                     const json = await res.json();
                     replyText = json.reply || json.response || json.message || 'Sucesso.';
@@ -887,12 +910,12 @@ function setupIpcHandlers() {
                     respondingModelName = 'Sistema';
                 }
             }
-            const p = getChatHistoryPath();
-            let history = [];
-            if (fs.existsSync(p)) { try { history = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) {} }
+            
+            // Save to disk
             history.push({ role: 'user', content: text, timestamp: Date.now() });
             history.push({ role: 'ig', content: replyText, timestamp: Date.now(), model, modelName: respondingModelName });
             fs.writeFileSync(p, JSON.stringify(history, null, 2));
+            
             return { text: replyText, modelName: respondingModelName };
         } catch (error) {
             return { text: `Erro interno: ${error.message}`, modelName: 'Sistema' };

